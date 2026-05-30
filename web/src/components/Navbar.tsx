@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { removeToken } from '../api/client';
 
@@ -27,7 +27,6 @@ export function clearUser(): void {
   localStorage.removeItem(USER_KEY);
 }
 
-// 自定义事件，用于跨组件同步登录状态
 const AUTH_CHANGE = 'auth-change';
 export function notifyAuthChange(): void {
   window.dispatchEvent(new Event(AUTH_CHANGE));
@@ -35,12 +34,20 @@ export function notifyAuthChange(): void {
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUserState] = useState<UserInfo | null>(getUser());
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handler = () => setUserState(getUser());
     window.addEventListener(AUTH_CHANGE, handler);
     return () => window.removeEventListener(AUTH_CHANGE, handler);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleLogout = () => {
@@ -50,103 +57,83 @@ function Navbar() {
     navigate('/');
   };
 
-  return (
-    <nav style={navStyle}>
-      <Link to="/" style={logoStyle}>
-        🎯 面试互助平台
-      </Link>
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
-      <div style={rightStyle}>
-        {user ? (
-          <>
-            <Link to="/find" style={navLinkStyle}>
-              找人
-            </Link>
-            <Link to="/appointments" style={navLinkStyle}>
-              预约
-            </Link>
-            <Link to="/settings/availability" style={navLinkStyle}>
-              设置
-            </Link>
-            <span style={nicknameStyle}>👤 {user.nickname}</span>
-            <button onClick={handleLogout} style={btnStyle}>
-              退出
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" style={linkStyle}>
-              登录
-            </Link>
-            <Link to="/register" style={{ ...linkStyle, ...registerBtnStyle }}>
-              注册
-            </Link>
-          </>
-        )}
+  const navLink = (path: string, label: string) => (
+    <Link
+      to={path}
+      className={`text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-md ${
+        isActive(path)
+          ? 'text-brand-700 bg-brand-50'
+          : 'text-text-secondary hover:text-text'
+      }`}
+    >
+      {label}
+    </Link>
+  );
+
+  return (
+    <nav
+      className={`sticky top-0 z-50 transition ${
+        scrolled
+          ? 'glass border-b border-border'
+          : 'bg-white border-b border-transparent'
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 no-underline">
+          <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </div>
+          <span className="text-sm font-bold text-text">面试互助平台</span>
+        </Link>
+
+        <div className="flex items-center gap-1">
+          {user ? (
+            <>
+              {navLink('/find', '找人')}
+              {navLink('/appointments', '预约')}
+              {navLink('/settings/availability', '设置')}
+
+              <span className="w-px h-4 bg-border mx-2" />
+
+              <span className="text-sm font-medium text-text flex items-center gap-1.5">
+                <span className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold">
+                  {user.nickname.charAt(0)}
+                </span>
+                <span className="hidden sm:inline">{user.nickname}</span>
+              </span>
+
+              <button
+                onClick={handleLogout}
+                className="text-sm text-text-muted hover:text-danger transition px-2 py-1 rounded-md cursor-pointer border-none bg-transparent font-medium"
+              >
+                退出
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link
+                to="/login"
+                className="text-sm font-medium text-text-secondary hover:text-text transition no-underline px-3 py-1.5"
+              >
+                登录
+              </Link>
+              <Link
+                to="/register"
+                className="text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 transition no-underline px-4 py-1.5 rounded-lg"
+              >
+                注册
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
 }
-
-const navStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '12px 40px',
-  background: '#fff',
-  borderBottom: '1px solid #e8e8e8',
-  fontFamily: 'system-ui',
-};
-
-const logoStyle: React.CSSProperties = {
-  fontSize: 20,
-  fontWeight: 700,
-  textDecoration: 'none',
-  color: '#1677ff',
-};
-
-const rightStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 16,
-};
-
-const nicknameStyle: React.CSSProperties = {
-  fontSize: 16,
-  color: '#333',
-};
-
-const linkStyle: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  textDecoration: 'none',
-  fontSize: 15,
-  color: '#1677ff',
-  border: '1px solid #1677ff',
-  background: '#fff',
-  cursor: 'pointer',
-};
-
-const registerBtnStyle: React.CSSProperties = {
-  background: '#1677ff',
-  color: '#fff',
-};
-
-const navLinkStyle: React.CSSProperties = {
-  textDecoration: 'none',
-  fontSize: 15,
-  color: '#333',
-  padding: '4px 8px',
-};
-
-const btnStyle: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  border: '1px solid #e8e8e8',
-  background: '#fff',
-  cursor: 'pointer',
-  fontSize: 15,
-  color: '#666',
-};
 
 export default Navbar;

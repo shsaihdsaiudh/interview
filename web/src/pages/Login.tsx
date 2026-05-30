@@ -48,116 +48,62 @@ function Login() {
   };
 
   return (
-    <div style={containerStyle}>
-      <h1 style={titleStyle}>登录</h1>
+    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-bold text-text text-center mb-8">登录</h1>
 
-      {error && <div style={errorStyle}>{error}</div>}
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm mb-6">
+              {error}
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <label style={labelStyle}>
-          邮箱
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="student@university.edu"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text-secondary">邮箱</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="student@university.edu"
+                className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                disabled={loading}
+              />
+            </label>
 
-        <label style={labelStyle}>
-          密码
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="请输入密码"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text-secondary">密码</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入密码"
+                className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                disabled={loading}
+              />
+            </label>
 
-        <button type="submit" disabled={loading} style={submitStyle}>
-          {loading ? '登录中...' : '登录'}
-        </button>
-      </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm
+                         transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none"
+            >
+              {loading ? '登录中...' : '登录'}
+            </button>
+          </form>
 
-      <p style={hintStyle}>
-        还没有账号？<Link to="/register">立即注册</Link>
-      </p>
+          <p className="text-center mt-6 text-sm text-text-muted">
+            还没有账号？
+            <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium ml-1">
+              立即注册
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
-
-// ── 样式 ──
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: 400,
-  margin: '60px auto',
-  padding: 40,
-  fontFamily: 'system-ui',
-  background: '#fff',
-  borderRadius: 12,
-  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: 28,
-  marginBottom: 24,
-  textAlign: 'center',
-};
-
-const formStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-  fontSize: 14,
-  color: '#555',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  fontSize: 15,
-  outline: 'none',
-  transition: 'border-color .2s',
-};
-
-const submitStyle: React.CSSProperties = {
-  padding: '12px 0',
-  borderRadius: 6,
-  border: 'none',
-  background: '#1677ff',
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: 'pointer',
-  marginTop: 8,
-};
-
-const errorStyle: React.CSSProperties = {
-  background: '#fff2f0',
-  border: '1px solid #ffccc7',
-  color: '#ff4d4f',
-  padding: '10px 16px',
-  borderRadius: 6,
-  marginBottom: 16,
-  fontSize: 14,
-};
-
-const hintStyle: React.CSSProperties = {
-  textAlign: 'center',
-  marginTop: 20,
-  fontSize: 14,
-  color: '#888',
-};
 
 export default Login;

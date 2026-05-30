@@ -28,11 +28,11 @@ interface DetailData {
 }
 
 const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
 function getDayOfWeek(dateStr: string): string {
-  const d = new Date(dateStr);
-  return dayNames[d.getDay()];
+  return dayNames[new Date(dateStr).getDay()];
 }
+
+const avatarColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
 
 function UserDetail() {
   const { id } = useParams<{ id: string }>();
@@ -68,7 +68,7 @@ function UserDetail() {
         time_slot_id: bookingId,
         message: message || '希望预约一场模拟面试',
       });
-      setBookingSuccess('预约成功！请等待对方确认');
+      setBookingSuccess('预约成功，请等待对方确认');
       setBookingId(null);
       setMessage('');
     } catch (err: any) {
@@ -77,215 +77,162 @@ function UserDetail() {
     }
   };
 
-  // ── 头像 ──
-  const avatarStyle = (name: string, avatarUrl: string): React.CSSProperties => {
-    const colors = ['#1677ff', '#52c41a', '#fa8c16', '#eb2f96', '#722ed1', '#13c2c2'];
-    const idx = name.charCodeAt(0) % colors.length;
-    return {
-      width: 64,
-      height: 64,
-      borderRadius: '50%',
-      background: avatarUrl ? `url(${avatarUrl}) center/cover` : colors[idx],
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 28,
-      fontWeight: 700,
-    };
-  };
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="skeleton h-48 rounded-2xl mb-4" />
+        <div className="skeleton h-64 rounded-2xl" />
+      </div>
+    );
+  }
 
-  // ── 渲染 ──
-  if (loading) return <div style={container}><p>⏳ 加载中...</p></div>;
-  if (error) return <div style={container}><p style={{ color: '#f5222d' }}>❌ {error}</p></div>;
-  if (!detail) return <div style={container}><p>用户不存在</p></div>;
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-10">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center text-red-600">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-10 text-center text-text-muted">
+        <p className="text-lg">用户不存在</p>
+      </div>
+    );
+  }
 
   const { user, availabilities } = detail;
   const isSelf = currentUser?.email === user.email;
+  const avatarBg = avatarColors[user.nickname.charCodeAt(0) % avatarColors.length];
 
   return (
-    <div style={container}>
-      {/* 用户信息卡片 */}
-      <div style={profileCard}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={avatarStyle(user.nickname, user.avatar)}>
-            {user.avatar ? '' : user.nickname.charAt(0)}
-          </div>
+    <div className="max-w-3xl mx-auto px-6 py-10">
+      {/* 用户信息 */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8 mb-4">
+        <div className="flex items-start gap-4">
+          {user.avatar ? (
+            <img src={user.avatar} alt={user.nickname} className="w-16 h-16 rounded-full object-cover" />
+          ) : (
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0"
+              style={{ background: avatarBg }}
+            >
+              {user.nickname.charAt(0)}
+            </div>
+          )}
           <div>
-            <h1 style={{ margin: 0, fontSize: 24 }}>{user.nickname}</h1>
-            <p style={{ margin: '4px 0 0', color: '#666' }}>
+            <h1 className="text-2xl font-bold text-text">{user.nickname}</h1>
+            <p className="text-text-secondary text-sm mt-1">
               {user.department || '未设置院系'} · {user.student_id}
             </p>
+            {user.tags && user.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {user.tags.map((t) => (
+                  <span key={t} className="px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 text-xs font-medium">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {user.tags && user.tags.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-            {user.tags.map((t) => (
-              <span key={t} style={tagStyle}>{t}</span>
-            ))}
-          </div>
-        )}
-
         {user.contact_info && (
-          <div style={contactStyle}>📞 联系方式：{user.contact_info}</div>
+          <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-border text-sm text-text-secondary">
+            联系方式：{user.contact_info}
+          </div>
         )}
       </div>
 
-      {/* 空闲时间列表 */}
-      <div style={sectionStyle}>
-        <h2>📅 空闲时间</h2>
+      {/* 空闲时间 */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+        <h2 className="text-lg font-bold text-text mb-4">空闲时间</h2>
+
         {availabilities.length === 0 ? (
-          <div style={emptyStyle}>暂无空闲时间</div>
+          <div className="text-center py-12 text-text-muted">
+            <p className="font-medium">暂无空闲时间</p>
+          </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-            {availabilities.map((slot) => (
-              <div
-                key={slot.id}
-                style={{
-                  ...slotCardStyle,
-                  borderColor: bookingId === slot.id ? '#1677ff' : '#e8e8e8',
-                  background: bookingId === slot.id ? '#e6f7ff' : '#fff',
-                }}
-                onClick={() => {
-                  if (!isSelf) setBookingId(slot.id === bookingId ? null : slot.id);
-                }}
-              >
-                <div style={{ fontWeight: 600, fontSize: 15 }}>
-                  📍 {slot.date} {getDayOfWeek(slot.date)}
-                </div>
-                <div style={{ color: '#666', fontSize: 14 }}>
-                  🕐 {slot.start_time} - {slot.end_time}
-                </div>
-                {!isSelf && bookingId === slot.id && (
-                  <div style={{ marginTop: 12 }}>
-                    <textarea
-                      placeholder="附言：简单介绍一下你想练习的方向..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      style={textareaStyle}
-                      rows={3}
-                    />
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <button onClick={handleBook} style={btnPrimary}>发起预约</button>
-                      <button onClick={() => setBookingId(null)} style={btnCancel}>取消</button>
-                      {bookingError && <span style={{ color: '#f5222d', fontSize: 13 }}>{bookingError}</span>}
-                      {bookingSuccess && <span style={{ color: '#52c41a', fontSize: 13 }}>{bookingSuccess}</span>}
+          <div className="flex flex-col gap-2">
+            {availabilities.map((slot) => {
+              const selected = bookingId === slot.id;
+              return (
+                <div
+                  key={slot.id}
+                  onClick={() => { if (!isSelf) setBookingId(selected ? null : slot.id); }}
+                  className={`rounded-xl p-4 border transition ${
+                    selected
+                      ? 'border-brand-400 bg-brand-50/50'
+                      : 'border-border bg-gray-50/50 hover:border-gray-300'
+                  } ${!isSelf ? 'cursor-pointer' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-text text-sm">
+                        {slot.date} <span className="text-text-muted font-normal">{getDayOfWeek(slot.date)}</span>
+                      </div>
+                      <div className="text-sm text-text-secondary mt-0.5">
+                        {slot.start_time} - {slot.end_time}
+                      </div>
                     </div>
+                    {!isSelf && !selected && (
+                      <span className="text-xs text-text-muted">选择</span>
+                    )}
+                    {selected && (
+                      <span className="text-xs text-brand-600 font-medium">已选中</span>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {selected && (
+                    <div className="mt-3 pt-3 border-t border-brand-200">
+                      <textarea
+                        placeholder="附言：简单介绍一下你想练习的方向..."
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm resize-y min-h-[72px]"
+                        rows={3}
+                      />
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={handleBook}
+                          className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium
+                                     transition cursor-pointer border-none"
+                        >
+                          发起预约
+                        </button>
+                        <button
+                          onClick={() => setBookingId(null)}
+                          className="px-4 py-2 rounded-lg border border-border bg-white text-text-secondary text-sm
+                                     font-medium hover:bg-gray-50 transition cursor-pointer"
+                        >
+                          取消
+                        </button>
+                        {bookingError && <span className="text-sm text-danger">{bookingError}</span>}
+                        {bookingSuccess && <span className="text-sm text-success">{bookingSuccess}</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
+
         {isSelf && (
-          <div style={{ marginTop: 12 }}>
-            <button onClick={() => navigate('/settings/availability')} style={btnSecondary}>
-              ⚙️ 管理我的空闲时间
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/settings/availability')}
+            className="mt-4 w-full py-2.5 rounded-xl border border-dashed border-border text-text-secondary text-sm
+                       font-medium hover:border-brand-300 hover:text-brand-600 transition cursor-pointer bg-transparent"
+          >
+            管理我的空闲时间
+          </button>
         )}
       </div>
     </div>
   );
 }
-
-// ── 样式 ──
-
-const container: React.CSSProperties = {
-  padding: 40,
-  maxWidth: 800,
-  margin: '0 auto',
-  fontFamily: 'system-ui',
-};
-
-const profileCard: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e8e8e8',
-  borderRadius: 12,
-  padding: 28,
-  marginBottom: 24,
-};
-
-const sectionStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e8e8e8',
-  borderRadius: 12,
-  padding: 28,
-};
-
-const slotCardStyle: React.CSSProperties = {
-  border: '1px solid #e8e8e8',
-  borderRadius: 8,
-  padding: 14,
-  cursor: 'pointer',
-  transition: 'all 0.2s',
-};
-
-const tagStyle: React.CSSProperties = {
-  padding: '4px 14px',
-  borderRadius: 14,
-  background: '#e6f7ff',
-  color: '#1677ff',
-  fontSize: 13,
-  fontWeight: 500,
-};
-
-const contactStyle: React.CSSProperties = {
-  marginTop: 12,
-  padding: '8px 14px',
-  background: '#f6ffed',
-  border: '1px solid #b7eb8f',
-  borderRadius: 8,
-  fontSize: 14,
-  color: '#389e0d',
-};
-
-const emptyStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: 40,
-  color: '#999',
-};
-
-const textareaStyle: React.CSSProperties = {
-  width: '100%',
-  padding: 10,
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  fontFamily: 'system-ui',
-  fontSize: 14,
-  resize: 'vertical',
-  boxSizing: 'border-box',
-};
-
-const btnPrimary: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  border: 'none',
-  background: '#1677ff',
-  color: '#fff',
-  fontSize: 14,
-  cursor: 'pointer',
-};
-
-const btnCancel: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  background: '#fff',
-  fontSize: 14,
-  cursor: 'pointer',
-  color: '#666',
-};
-
-const btnSecondary: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  border: '1px solid #1677ff',
-  background: '#fff',
-  color: '#1677ff',
-  fontSize: 14,
-  cursor: 'pointer',
-};
 
 export default UserDetail;

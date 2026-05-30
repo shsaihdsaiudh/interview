@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   设计系统 — 产品级：克制、内容优先
+   ═══════════════════════════════════════════ */
+
+@theme {
+  /* 主色：只用一种 */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+
+  /* 表面：三层灰度 */
+  --color-surface: #fafafa;
+  --color-surface-alt: #f5f5f5;
+  --color-card: #ffffff;
+  --color-border: #e5e5e5;
+  --color-border-light: #f0f0f0;
+
+  /* 文字：三层对比度 */
+  --color-text: #171717;
+  --color-text-secondary: #737373;
+  --color-text-muted: #a3a3a3;
+
+  /* 功能色 */
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  --color-danger: #dc2626;
+
+  /* 字体 */
+  --font-sans: 'Inter', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+}
+
+/* ═══════════════════════════════════════════
+   全局
+   ═══════════════════════════════════════════ */
+
+html {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════
+   唯一的阴影
+   ═══════════════════════════════════════════ */
+
+.shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ═══════════════════════════════════════════
+   过渡
+   ═══════════════════════════════════════════ */
+
+.transition {
+  transition: all 0.15s ease;
+}
+
+/* ═══════════════════════════════════════════
+   毛玻璃（仅导航栏使用）
+   ═══════════════════════════════════════════ */
+
+.glass {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ═══════════════════════════════════════════
+   骨架屏
+   ═══════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f5f5f5 25%, #e5e5e5 50%, #f5f5f5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+/* ═══════════════════════════════════════════
+   输入框
+   ═══════════════════════════════════════════ */
+
+input:focus-visible {
+  border-color: var(--color-brand-400);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  outline: none;
+}
+
+/* ═══════════════════════════════════════════
+   滚动条
+   ═══════════════════════════════════════════ */
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+
+/* ═══════════════════════════════════════════
+   选中
+   ═══════════════════════════════════════════ */
+
+::selection {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-text);
+}

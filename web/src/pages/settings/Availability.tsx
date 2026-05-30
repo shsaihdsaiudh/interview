@@ -24,18 +24,19 @@ interface ProfileData {
   availabilities: TimeSlot[];
 }
 
+const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+const getDayOfWeek = (dateStr: string) => dayNames[new Date(dateStr).getDay()];
+
 function AvailabilitySettings() {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionMsg, setActionMsg] = useState('');
 
-  // 表单：添加空闲时间
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
-  // 表单：编辑资料
   const [nickname, setNickname] = useState('');
   const [department, setDepartment] = useState('');
   const [tagsStr, setTagsStr] = useState('');
@@ -58,156 +59,152 @@ function AvailabilitySettings() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const showMsg = (msg: string) => {
     setActionMsg(msg);
     setTimeout(() => setActionMsg(''), 3000);
   };
 
-  // 添加空闲时间
   const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !startTime || !endTime) return;
     try {
       await apiPost('/availability', { date, start_time: startTime, end_time: endTime });
-      setDate('');
-      setStartTime('');
-      setEndTime('');
-      showMsg('✅ 空闲时间已添加');
+      setDate(''); setStartTime(''); setEndTime('');
+      showMsg('已添加');
       fetchData();
     } catch (err: any) {
-      showMsg('❌ ' + (err?.response?.data?.error || '添加失败'));
+      showMsg(err?.response?.data?.error || '添加失败');
     }
   };
 
-  // 删除空闲时间
   const handleDeleteSlot = async (id: string) => {
     try {
       await apiDelete(`/availability/${id}`);
-      showMsg('✅ 已删除');
+      showMsg('已删除');
       fetchData();
     } catch (err: any) {
-      showMsg('❌ ' + (err?.response?.data?.error || '删除失败'));
+      showMsg(err?.response?.data?.error || '删除失败');
     }
   };
 
-  // 保存资料
   const handleSaveProfile = async () => {
-    const tags = tagsStr
-      .split(/[,，]/)
-      .map((t) => t.trim())
-      .filter(Boolean);
+    const tags = tagsStr.split(/[,，]/).map((t) => t.trim()).filter(Boolean);
     try {
-      await apiPut('/profile', {
-        nickname,
-        student_id: studentId,
-        department,
-        tags,
-        avatar,
-        contact_info: contactInfo,
-      });
-      // 更新本地存储的用户信息
+      await apiPut('/profile', { nickname, student_id: studentId, department, tags, avatar, contact_info: contactInfo });
       const u = getUser();
-      if (u) {
-        setUser({ ...u, nickname });
-        notifyAuthChange();
-      }
-      showMsg('✅ 资料已保存');
+      if (u) { setUser({ ...u, nickname }); notifyAuthChange(); }
+      showMsg('已保存');
     } catch (err: any) {
-      showMsg('❌ ' + (err?.response?.data?.error || '保存失败'));
+      showMsg(err?.response?.data?.error || '保存失败');
     }
   };
 
-  const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  const getDayOfWeek = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return dayNames[d.getDay()];
-  };
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-10">
+        <div className="skeleton h-96 rounded-2xl" />
+      </div>
+    );
+  }
 
-  if (loading) return <div style={container}><p>⏳ 加载中...</p></div>;
-  if (error) return <div style={container}><p style={{ color: '#f5222d' }}>❌ {error}</p></div>;
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-10">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center text-red-600">{error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={container}>
-      <h1>⚙️ 设置</h1>
+    <div className="max-w-2xl mx-auto px-6 py-10">
+      <h1 className="text-2xl font-bold text-text mb-8">设置</h1>
 
       {actionMsg && (
-        <div style={{
-          ...msgBanner,
-          background: actionMsg.startsWith('✅') ? '#f6ffed' : '#fff2f0',
-          borderColor: actionMsg.startsWith('✅') ? '#b7eb8f' : '#ffccc7',
-        }}>
+        <div className={`px-4 py-2.5 rounded-xl text-sm mb-4 border ${
+          actionMsg === '已保存' || actionMsg === '已添加' || actionMsg === '已删除'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            : 'bg-red-50 border-red-200 text-red-600'
+        }`}>
           {actionMsg}
         </div>
       )}
 
-      {/* ── 个人资料编辑 ── */}
-      <div style={sectionStyle}>
-        <h2>👤 个人资料</h2>
-        <div style={formGrid}>
-          <label style={labelStyle}>
-            昵称
-            <input style={inputStyle} value={nickname} onChange={(e) => setNickname(e.target.value)} />
+      {/* 个人资料 */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8 mb-4">
+        <h2 className="text-lg font-bold text-text mb-5">个人资料</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-secondary">昵称</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={nickname} onChange={(e) => setNickname(e.target.value)} />
           </label>
-          <label style={labelStyle}>
-            学号
-            <input style={inputStyle} value={studentId} onChange={(e) => setStudentId(e.target.value)} />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-secondary">学号</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={studentId} onChange={(e) => setStudentId(e.target.value)} />
           </label>
-          <label style={labelStyle}>
-            院系
-            <input style={inputStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="如：计算机学院" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-secondary">院系</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="如：计算机学院" />
           </label>
-          <label style={labelStyle}>
-            面试方向标签（逗号分隔）
-            <input style={inputStyle} value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="如：产品, 前端, 后端" />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text-secondary">面试方向标签</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="产品, 前端, 后端" />
           </label>
-          <label style={labelStyle}>
-            头像 URL
-            <input style={inputStyle} value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." />
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-medium text-text-secondary">头像 URL</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." />
           </label>
-          <label style={labelStyle}>
-            联系方式
-            <input style={inputStyle} value={contactInfo} onChange={(e) => setContactInfo(e.target.value)} placeholder="微信 / QQ / 手机" />
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-sm font-medium text-text-secondary">联系方式</span>
+            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={contactInfo} onChange={(e) => setContactInfo(e.target.value)} placeholder="微信 / QQ / 手机" />
           </label>
         </div>
-        <button onClick={handleSaveProfile} style={btnPrimary}>💾 保存资料</button>
+        <button
+          onClick={handleSaveProfile}
+          className="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition cursor-pointer border-none"
+        >
+          保存资料
+        </button>
       </div>
 
-      {/* ── 空闲时间管理 ── */}
-      <div style={sectionStyle}>
-        <h2>📅 空闲时间</h2>
+      {/* 空闲时间 */}
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+        <h2 className="text-lg font-bold text-text mb-4">空闲时间</h2>
 
-        {/* 添加表单 */}
-        <form onSubmit={handleAddSlot} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end', marginBottom: 20 }}>
-          <label style={miniLabel}>
-            日期
-            <input type="date" style={inputStyle} value={date} onChange={(e) => setDate(e.target.value)} required />
+        <form onSubmit={handleAddSlot} className="flex flex-wrap gap-2 items-end mb-5 p-3 rounded-xl bg-surface-alt border border-border">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-text-muted">日期</span>
+            <input type="date" className="px-2 py-1.5 rounded-md border border-border bg-white text-sm" value={date} onChange={(e) => setDate(e.target.value)} required />
           </label>
-          <label style={miniLabel}>
-            开始
-            <input type="time" style={inputStyle} value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-text-muted">开始</span>
+            <input type="time" className="px-2 py-1.5 rounded-md border border-border bg-white text-sm" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
           </label>
-          <label style={miniLabel}>
-            结束
-            <input type="time" style={inputStyle} value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-text-muted">结束</span>
+            <input type="time" className="px-2 py-1.5 rounded-md border border-border bg-white text-sm" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
           </label>
-          <button type="submit" style={{ ...btnPrimary, height: 38 }}>➕ 添加</button>
+          <button type="submit" className="px-3 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition cursor-pointer border-none">
+            添加
+          </button>
         </form>
 
-        {/* 已有时间列表 */}
         {slots.length === 0 ? (
-          <div style={emptyStyle}>还没有添加空闲时间</div>
+          <div className="text-center py-10 text-text-muted text-sm">还没有添加空闲时间</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="flex flex-col gap-1.5">
             {slots.map((s) => (
-              <div key={s.id} style={slotItemStyle}>
-                <span>
-                  📍 {s.date} {getDayOfWeek(s.date)} · 🕐 {s.start_time} - {s.end_time}
+              <div key={s.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-alt border border-border text-sm">
+                <span className="text-text-secondary">
+                  {s.date} {getDayOfWeek(s.date)} · {s.start_time} - {s.end_time}
                 </span>
-                <button onClick={() => handleDeleteSlot(s.id)} style={btnDelete}>删除</button>
+                <button
+                  onClick={() => handleDeleteSlot(s.id)}
+                  className="text-xs text-text-muted hover:text-danger transition cursor-pointer border-none bg-transparent"
+                >
+                  删除
+                </button>
               </div>
             ))}
           </div>
@@ -216,98 +213,5 @@ function AvailabilitySettings() {
     </div>
   );
 }
-
-// ── 样式 ──
-
-const container: React.CSSProperties = {
-  padding: 40,
-  maxWidth: 700,
-  margin: '0 auto',
-  fontFamily: 'system-ui',
-};
-
-const sectionStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e8e8e8',
-  borderRadius: 12,
-  padding: 24,
-  marginTop: 20,
-};
-
-const formGrid: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: '12px 20px',
-  marginBottom: 16,
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-  fontSize: 14,
-  color: '#333',
-};
-
-const miniLabel: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-  fontSize: 14,
-  color: '#333',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  fontSize: 14,
-  fontFamily: 'system-ui',
-  boxSizing: 'border-box',
-};
-
-const btnPrimary: React.CSSProperties = {
-  padding: '8px 20px',
-  borderRadius: 6,
-  border: 'none',
-  background: '#1677ff',
-  color: '#fff',
-  fontSize: 14,
-  cursor: 'pointer',
-};
-
-const btnDelete: React.CSSProperties = {
-  padding: '4px 14px',
-  borderRadius: 6,
-  border: '1px solid #ffccc7',
-  background: '#fff',
-  color: '#f5222d',
-  fontSize: 13,
-  cursor: 'pointer',
-};
-
-const slotItemStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '10px 14px',
-  background: '#fafafa',
-  borderRadius: 8,
-  fontSize: 14,
-};
-
-const emptyStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: 30,
-  color: '#999',
-};
-
-const msgBanner: React.CSSProperties = {
-  padding: '10px 16px',
-  borderRadius: 8,
-  marginBottom: 16,
-  border: '1px solid',
-  fontSize: 14,
-};
 
 export default AvailabilitySettings;

@@ -23,7 +23,6 @@ function Register() {
     e.preventDefault();
     setError('');
 
-    // 前端校验
     if (!email || !password || !nickname || !studentId) {
       setError('请填写所有字段');
       return;
@@ -48,7 +47,6 @@ function Register() {
         student_id: studentId,
       });
       setSuccess(true);
-      // 开发提示
       console.log('注册成功:', data);
     } catch (err: unknown) {
       const msg =
@@ -60,168 +58,114 @@ function Register() {
     }
   };
 
-  // 注册成功后的提示页
   if (success) {
     return (
-      <div style={containerStyle}>
-        <h1 style={titleStyle}>🎉 注册成功</h1>
-        <div style={successBoxStyle}>
-          <p>请查看你的邮箱 <strong>{email}</strong> 中的验证链接。</p>
-          <p style={{ color: '#888', fontSize: 14 }}>
-            （开发阶段：验证链接已打印到后端控制台日志，请查看服务端输出）
-          </p>
-          <p style={{ color: '#888', fontSize: 14 }}>
-            点击验证链接后即可
-            <Link to="/login"> 登录</Link>
-          </p>
+      <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-bold text-text text-center mb-8">注册成功</h1>
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+            <div className="text-sm text-text-secondary leading-relaxed space-y-3">
+              <p>
+                请查看你的邮箱 <strong className="text-text">{email}</strong> 中的验证链接。
+              </p>
+              <p className="text-text-muted text-xs">
+                （开发阶段：验证链接已打印到后端控制台日志）
+              </p>
+              <p className="text-text-muted text-xs">
+                点击验证链接后即可
+                <Link to="/login" className="text-brand-600 font-medium ml-1">登录</Link>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={containerStyle}>
-      <h1 style={titleStyle}>注册</h1>
+    <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-bold text-text text-center mb-8">创建账号</h1>
 
-      {error && <div style={errorStyle}>{error}</div>}
+        <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm mb-6">
+              {error}
+            </div>
+          )}
 
-      <form onSubmit={handleSubmit} style={formStyle}>
-        <label style={labelStyle}>
-          邮箱 <span style={{ color: '#999' }}>（仅限 .edu 学生邮箱）</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="student@university.edu"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text-secondary">
+                邮箱 <span className="text-text-muted font-normal">（.edu 学生邮箱）</span>
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="student@university.edu"
+                className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                disabled={loading}
+              />
+            </label>
 
-        <label style={labelStyle}>
-          密码
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="至少 6 位密码"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text-secondary">密码</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="至少 6 位密码"
+                className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                disabled={loading}
+              />
+            </label>
 
-        <label style={labelStyle}>
-          昵称
-          <input
-            type="text"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            placeholder="你的昵称"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-text-secondary">昵称</span>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="你的昵称"
+                  className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                  disabled={loading}
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-text-secondary">学号</span>
+                <input
+                  type="text"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder="你的学号"
+                  className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                  disabled={loading}
+                />
+              </label>
+            </div>
 
-        <label style={labelStyle}>
-          学号
-          <input
-            type="text"
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            placeholder="你的学号"
-            style={inputStyle}
-            disabled={loading}
-          />
-        </label>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm
+                         transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none"
+            >
+              {loading ? '注册中...' : '注册'}
+            </button>
+          </form>
 
-        <button type="submit" disabled={loading} style={submitStyle}>
-          {loading ? '注册中...' : '注册'}
-        </button>
-      </form>
-
-      <p style={hintStyle}>
-        已有账号？<Link to="/login">立即登录</Link>
-      </p>
+          <p className="text-center mt-6 text-sm text-text-muted">
+            已有账号？
+            <Link to="/login" className="text-brand-600 hover:text-brand-700 font-medium ml-1">
+              立即登录
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
-
-// ── 样式 ──
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: 440,
-  margin: '60px auto',
-  padding: 40,
-  fontFamily: 'system-ui',
-  background: '#fff',
-  borderRadius: 12,
-  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: 28,
-  marginBottom: 24,
-  textAlign: 'center',
-};
-
-const formStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-  fontSize: 14,
-  color: '#555',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '10px 14px',
-  borderRadius: 6,
-  border: '1px solid #d9d9d9',
-  fontSize: 15,
-  outline: 'none',
-};
-
-const submitStyle: React.CSSProperties = {
-  padding: '12px 0',
-  borderRadius: 6,
-  border: 'none',
-  background: '#1677ff',
-  color: '#fff',
-  fontSize: 16,
-  fontWeight: 600,
-  cursor: 'pointer',
-  marginTop: 8,
-};
-
-const errorStyle: React.CSSProperties = {
-  background: '#fff2f0',
-  border: '1px solid #ffccc7',
-  color: '#ff4d4f',
-  padding: '10px 16px',
-  borderRadius: 6,
-  marginBottom: 16,
-  fontSize: 14,
-};
-
-const successBoxStyle: React.CSSProperties = {
-  background: '#f6ffed',
-  border: '1px solid #b7eb8f',
-  padding: 24,
-  borderRadius: 8,
-  lineHeight: 1.8,
-  fontSize: 15,
-};
-
-const hintStyle: React.CSSProperties = {
-  textAlign: 'center',
-  marginTop: 20,
-  fontSize: 14,
-  color: '#888',
-};
 
 export default Register;

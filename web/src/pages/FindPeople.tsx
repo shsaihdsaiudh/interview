@@ -11,6 +11,8 @@ interface UserItem {
   avatar: string;
 }
 
+const avatarColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#ef4444', '#f97316'];
+
 function FindPeople() {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,122 +25,87 @@ function FindPeople() {
       .finally(() => setLoading(false));
   }, []);
 
-  // ── 字母头像生成 ──
-  const avatarStyle = (name: string, avatarUrl: string): React.CSSProperties => {
-    const colors = ['#1677ff', '#52c41a', '#fa8c16', '#eb2f96', '#722ed1', '#13c2c2', '#f5222d', '#faad14'];
-    const idx = name.charCodeAt(0) % colors.length;
-    return {
-      width: 48,
-      height: 48,
-      borderRadius: '50%',
-      background: avatarUrl ? `url(${avatarUrl}) center/cover` : colors[idx],
-      color: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 20,
-      fontWeight: 700,
-      flexShrink: 0,
-    };
-  };
-
-  // ── 渲染 ──
   if (loading) {
-    return <div style={containerStyle}><p>⏳ 加载中...</p></div>;
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton h-36" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div style={containerStyle}><p style={{ color: '#f5222d' }}>❌ {error}</p></div>;
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center text-red-600">
+          {error}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={containerStyle}>
-      <h1>🔍 找人面试</h1>
-      <p style={{ color: '#666' }}>浏览可预约的面试官，找到和你方向匹配的人</p>
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-text">找人面试</h1>
+        <p className="text-text-secondary text-sm mt-1">浏览可预约的面试官，找到和你方向匹配的人</p>
+      </div>
 
       {users.length === 0 ? (
-        <div style={emptyStyle}>📭 还没有已验证的用户，快去邀请同学注册吧</div>
+        <div className="text-center py-20 text-text-muted">
+          <p className="text-lg font-medium">还没有已验证的用户</p>
+          <p className="text-sm mt-1">快去邀请同学注册吧</p>
+        </div>
       ) : (
-        <div style={gridStyle}>
-          {users.map((u) => (
-            <Link to={`/user/${u.email}`} key={u.email} style={cardStyle}>
-              <div style={cardHeader}>
-                <div style={avatarStyle(u.nickname, u.avatar)}>
-                  {u.avatar ? '' : u.nickname.charAt(0)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((u) => {
+            const bg = avatarColors[u.nickname.charCodeAt(0) % avatarColors.length];
+            return (
+              <Link
+                to={`/user/${u.email}`}
+                key={u.email}
+                className="group bg-card rounded-2xl border border-border p-5 no-underline text-inherit
+                           hover:border-brand-200 hover:shadow-sm transition"
+              >
+                <div className="flex items-center gap-3">
+                  {u.avatar ? (
+                    <img src={u.avatar} alt={u.nickname} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
+                      style={{ background: bg }}
+                    >
+                      {u.nickname.charAt(0)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-semibold text-text group-hover:text-brand-600 transition-colors truncate">
+                      {u.nickname}
+                    </div>
+                    <div className="text-sm text-text-muted truncate mt-0.5">
+                      {u.department || '未设置院系'}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: '#333' }}>{u.nickname}</div>
-                  <div style={{ color: '#999', fontSize: 13 }}>{u.department || '未设置院系'}</div>
-                </div>
-              </div>
-              {u.tags && u.tags.length > 0 && (
-                <div style={tagsWrap}>
-                  {u.tags.map((t) => (
-                    <span key={t} style={tagStyle}>{t}</span>
-                  ))}
-                </div>
-              )}
-            </Link>
-          ))}
+                {u.tags && u.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border">
+                    {u.tags.map((t) => (
+                      <span key={t} className="px-2 py-0.5 rounded-md bg-brand-50 text-brand-700 text-xs font-medium">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
-
-// ── 样式 ──
-
-const containerStyle: React.CSSProperties = {
-  padding: 40,
-  maxWidth: 1000,
-  margin: '0 auto',
-  fontFamily: 'system-ui',
-};
-
-const emptyStyle: React.CSSProperties = {
-  textAlign: 'center',
-  padding: 60,
-  color: '#999',
-  fontSize: 16,
-};
-
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-  gap: 16,
-  marginTop: 24,
-};
-
-const cardStyle: React.CSSProperties = {
-  background: '#fff',
-  border: '1px solid #e8e8e8',
-  borderRadius: 10,
-  padding: 20,
-  textDecoration: 'none',
-  color: 'inherit',
-  transition: 'box-shadow 0.2s',
-};
-
-const cardHeader: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 12,
-};
-
-const tagsWrap: React.CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 6,
-  marginTop: 12,
-};
-
-const tagStyle: React.CSSProperties = {
-  display: 'inline-block',
-  padding: '2px 10px',
-  borderRadius: 12,
-  background: '#e6f7ff',
-  color: '#1677ff',
-  fontSize: 12,
-};
 
 export default FindPeople;
