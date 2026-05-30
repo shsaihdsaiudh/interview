@@ -64,11 +64,11 @@ func (a *Appointment) IsAccepted() bool {
 // Availability 表示用户的一段空闲时间。
 // 它是一个实体（有自己的 ID 和生命周期），但不是聚合根。
 type Availability struct {
-	ID        string
-	UserID    string
-	Date      string // "2006-01-02" 格式
-	StartTime string // "14:00" 格式
-	EndTime   string // "15:00" 格式
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	Date      string `json:"date"`       // "2006-01-02" 格式
+	StartTime string `json:"start_time"` // "14:00" 格式
+	EndTime   string `json:"end_time"`   // "15:00" 格式
 }
 
 // ── 请求/响应 DTO ──

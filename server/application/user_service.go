@@ -58,6 +58,7 @@ func (s *UserService) Register(req user.RegisterRequest) (*user.UserResponse, er
 		PasswordHash:  string(hash),
 		Nickname:      req.Nickname,
 		StudentID:     req.StudentID,
+		Tags:          []string{},
 		EmailVerified: false,
 		VerifyToken:   verifyToken,
 		CreatedAt:     time.Now(),
