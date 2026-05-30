@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go
+server/tmp/
+*.exe
+
+# Node
+node_modules/
+web/dist/
+
+# Env
+.env
+.env.local
