@@ -1,4 +1,4 @@
-package repository
+package persistence
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPool 创建 PostgreSQL 连接池
+// NewPool 创建 PostgreSQL 连接池。
 func NewPool(ctx context.Context, dsn string) *pgxpool.Pool {
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {

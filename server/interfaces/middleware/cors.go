@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORS 允许前端开发服务器跨域请求
+// CORS 允许前端开发服务器跨域请求。
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "http://localhost:5173")
