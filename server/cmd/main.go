@@ -23,12 +23,27 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// 初始化分层依赖
-	userRepo := repository.NewUserRepo()
-	authSvc := service.NewAuthService(userRepo)
-	authH := handler.NewAuthHandler(authSvc)
+	// ── 初始化共享存储 ──
+	store := repository.NewStore()
 
-	// API v1 路由组
+	// ── 初始化仓库层 ──
+	userRepo := repository.NewUserRepo(store)
+	availRepo := repository.NewAvailabilityRepo(store)
+	apptRepo := repository.NewAppointmentRepo(store)
+
+	// ── 初始化服务层 ──
+	authSvc := service.NewAuthService(userRepo)
+	availSvc := service.NewAvailabilityService(availRepo)
+	apptSvc := service.NewAppointmentService(apptRepo, availRepo, userRepo)
+	userSvc := service.NewUserService(userRepo, availRepo, apptRepo)
+
+	// ── 初始化处理器层 ──
+	authH := handler.NewAuthHandler(authSvc)
+	userH := handler.NewUserHandler(userSvc)
+	availH := handler.NewAvailabilityHandler(availSvc)
+	apptH := handler.NewAppointmentHandler(apptSvc)
+
+	// ── API v1 路由组 ──
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/ping", handler.Ping)
@@ -40,12 +55,35 @@ func main() {
 			auth.GET("/verify-email", authH.VerifyEmail)
 			auth.POST("/login", authH.Login)
 
-			// 需要登录的路由
 			authRequired := auth.Group("")
 			authRequired.Use(middleware.JWTAuth())
 			{
 				authRequired.GET("/me", authH.Me)
 			}
+		}
+
+		// 用户路由（部分公开）
+		v1.GET("/users", userH.ListUsers)
+		v1.GET("/users/:id", userH.GetUser)
+
+		// 需要登录的路由
+		protected := v1.Group("")
+		protected.Use(middleware.JWTAuth())
+		{
+			// 个人资料
+			protected.GET("/profile", userH.GetProfile)
+			protected.PUT("/profile", userH.UpdateProfile)
+
+			// 空闲时间管理
+			protected.GET("/availability", availH.GetMyAvailability)
+			protected.POST("/availability", availH.AddAvailability)
+			protected.DELETE("/availability/:id", availH.DeleteAvailability)
+
+			// 预约管理
+			protected.POST("/appointments", apptH.CreateAppointment)
+			protected.GET("/appointments", apptH.GetMyAppointments)
+			protected.PUT("/appointments/:id/accept", apptH.AcceptAppointment)
+			protected.PUT("/appointments/:id/reject", apptH.RejectAppointment)
 		}
 	}
 

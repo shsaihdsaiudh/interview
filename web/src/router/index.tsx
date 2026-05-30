@@ -2,9 +2,12 @@ import { createBrowserRouter } from 'react-router-dom';
 import App from '../App';
 import Home from '../pages/Home';
 import FindPeople from '../pages/FindPeople';
+import UserDetail from '../pages/UserDetail';
 import Posts from '../pages/Posts';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import Appointments from '../pages/Appointments';
+import AvailabilitySettings from '../pages/settings/Availability';
 
 const router = createBrowserRouter([
   {
@@ -12,9 +15,12 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Home /> },
       { path: '/find', element: <FindPeople /> },
+      { path: '/user/:id', element: <UserDetail /> },
       { path: '/posts', element: <Posts /> },
       { path: '/login', element: <Login /> },
       { path: '/register', element: <Register /> },
+      { path: '/appointments', element: <Appointments /> },
+      { path: '/settings/availability', element: <AvailabilitySettings /> },
     ],
   },
 ]);

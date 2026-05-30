@@ -59,6 +59,15 @@ function Navbar() {
       <div style={rightStyle}>
         {user ? (
           <>
+            <Link to="/find" style={navLinkStyle}>
+              找人
+            </Link>
+            <Link to="/appointments" style={navLinkStyle}>
+              预约
+            </Link>
+            <Link to="/settings/availability" style={navLinkStyle}>
+              设置
+            </Link>
             <span style={nicknameStyle}>👤 {user.nickname}</span>
             <button onClick={handleLogout} style={btnStyle}>
               退出
@@ -121,6 +130,13 @@ const linkStyle: React.CSSProperties = {
 const registerBtnStyle: React.CSSProperties = {
   background: '#1677ff',
   color: '#fff',
+};
+
+const navLinkStyle: React.CSSProperties = {
+  textDecoration: 'none',
+  fontSize: 15,
+  color: '#333',
+  padding: '4px 8px',
 };
 
 const btnStyle: React.CSSProperties = {

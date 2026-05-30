@@ -59,4 +59,14 @@ export async function apiPost<T>(url: string, data?: unknown): Promise<T> {
   return res.data;
 }
 
+export async function apiPut<T>(url: string, data?: unknown): Promise<T> {
+  const res = await apiClient.put<T>(url, data);
+  return res.data;
+}
+
+export async function apiDelete<T>(url: string): Promise<T> {
+  const res = await apiClient.delete<T>(url);
+  return res.data;
+}
+
 export default apiClient;
