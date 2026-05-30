@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -23,13 +24,16 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// ── 初始化共享存储 ──
-	store := repository.NewStore()
+	// ── 初始化 PostgreSQL 连接池 ──
+	ctx := context.Background()
+	dsn := "postgres://interview:interview123@localhost:5432/interview_platform?sslmode=disable"
+	pool := repository.NewPool(ctx, dsn)
+	defer pool.Close()
 
-	// ── 初始化仓库层 ──
-	userRepo := repository.NewUserRepo(store)
-	availRepo := repository.NewAvailabilityRepo(store)
-	apptRepo := repository.NewAppointmentRepo(store)
+	// ── 初始化仓库层（共享同一个连接池） ──
+	userRepo := repository.NewUserRepo(pool)
+	availRepo := repository.NewAvailabilityRepo(pool)
+	apptRepo := repository.NewAppointmentRepo(pool)
 
 	// ── 初始化服务层 ──
 	authSvc := service.NewAuthService(userRepo)

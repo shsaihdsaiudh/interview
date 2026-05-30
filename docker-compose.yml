@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: interview-pg
+    environment:
+      POSTGRES_USER: interview
+      POSTGRES_PASSWORD: interview123
+      POSTGRES_DB: interview_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+volumes:
+  pgdata:
