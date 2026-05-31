@@ -96,7 +96,7 @@ function Navbar() {
             <>
               {navLink('/find', '找人')}
               {navLink('/appointments', '预约')}
-              {navLink('/settings/availability', '设置')}
+              {navLink('/settings', '设置')}
 
               <span className="w-px h-4 bg-border mx-2" />
 

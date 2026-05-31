@@ -24,7 +24,32 @@ func NewUserHandler(userSvc *application.UserService) *UserHandler {
 // 认证相关
 // =============================================================================
 
-// Register 用户注册。
+// SendCode 发送邮箱验证码。
+func (h *UserHandler) SendCode(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数不合法: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.SendCode(req.Email); err != nil {
+		switch {
+		case errors.Is(err, user.ErrInvalidEmail):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, user.ErrEmailAlreadyExists):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "发送验证码失败"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "验证码已发送（开发阶段请看服务端日志）"})
+}
+
+// Register 用户注册。验证码通过后直接返回 JWT。
 func (h *UserHandler) Register(c *gin.Context) {
 	var req user.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -39,16 +64,15 @@ func (h *UserHandler) Register(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		case errors.Is(err, user.ErrEmailAlreadyExists):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, user.ErrInvalidCode):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "注册失败，请稍后重试"})
 		}
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "注册成功，请查看邮箱验证链接（开发阶段验证链接已打印到服务端日志）",
-		"user":    resp,
-	})
+	c.JSON(http.StatusCreated, resp)
 }
 
 // VerifyEmail 邮箱验证。

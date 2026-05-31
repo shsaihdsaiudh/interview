@@ -1,38 +1,72 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { apiPost } from '../api/client';
+import { Link, useNavigate } from 'react-router-dom';
+import { apiPost, setToken } from '../api/client';
+import { setUser, notifyAuthChange } from '../components/Navbar';
 
 interface RegisterResponse {
-  message: string;
+  token: string;
   user: {
     email: string;
     nickname: string;
+    email_verified: boolean;
   };
 }
 
 function Register() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [studentId, setStudentId] = useState('');
+  const [sending, setSending] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendCode = async () => {
+    setError('');
+    if (!email) {
+      setError('请填写邮箱');
+      return;
+    }
+    if (!email.endsWith('@std.uestc.edu.cn')) {
+      setError('仅支持 @std.uestc.edu.cn 邮箱注册');
+      return;
+    }
+
+    setSending(true);
+    try {
+      await apiPost('/auth/send-code', { email });
+      setCodeSent(true);
+      setCountdown(60);
+      // 倒计时
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+        '发送验证码失败';
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password || !nickname || !studentId) {
+    if (!email || !code || !password) {
       setError('请填写所有字段');
       return;
     }
-
-    if (!email.endsWith('.edu')) {
-      setError('仅支持 .edu 结尾的学生邮箱注册');
-      return;
-    }
-
     if (password.length < 6) {
       setError('密码至少需要 6 个字符');
       return;
@@ -42,12 +76,13 @@ function Register() {
     try {
       const data = await apiPost<RegisterResponse>('/auth/register', {
         email,
+        code,
         password,
-        nickname,
-        student_id: studentId,
       });
-      setSuccess(true);
-      console.log('注册成功:', data);
+      setToken(data.token);
+      setUser({ email: data.user.email, nickname: data.user.nickname });
+      notifyAuthChange();
+      navigate('/');
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
@@ -57,30 +92,6 @@ function Register() {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
-        <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-text text-center mb-8">注册成功</h1>
-          <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
-            <div className="text-sm text-text-secondary leading-relaxed space-y-3">
-              <p>
-                请查看你的邮箱 <strong className="text-text">{email}</strong> 中的验证链接。
-              </p>
-              <p className="text-text-muted text-xs">
-                （开发阶段：验证链接已打印到后端控制台日志）
-              </p>
-              <p className="text-text-muted text-xs">
-                点击验证链接后即可
-                <Link to="/login" className="text-brand-600 font-medium ml-1">登录</Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
@@ -94,21 +105,53 @@ function Register() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleRegister} className="flex flex-col gap-4">
+            {/* 邮箱 + 发送验证码 */}
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text-secondary">
-                邮箱 <span className="text-text-muted font-normal">（.edu 学生邮箱）</span>
+                邮箱 <span className="text-text-muted font-normal">（@std.uestc.edu.cn）</span>
               </span>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setCodeSent(false); }}
+                  placeholder="2024010914026@std.uestc.edu.cn"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={sending || countdown > 0 || loading}
+                  className="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium
+                             transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none whitespace-nowrap"
+                >
+                  {sending ? '发送中...' : countdown > 0 ? `${countdown}s` : '发送验证码'}
+                </button>
+              </div>
+            </label>
+
+            {/* 验证码 */}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text-secondary">验证码</span>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="student@university.edu"
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="请输入 6 位验证码"
+                maxLength={6}
                 className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
                 disabled={loading}
               />
+              {codeSent && (
+                <span className="text-xs text-text-muted">
+                  开发阶段：验证码已打印到后端控制台日志
+                </span>
+              )}
             </label>
 
+            {/* 密码 */}
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text-secondary">密码</span>
               <input
@@ -120,31 +163,6 @@ function Register() {
                 disabled={loading}
               />
             </label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-text-secondary">昵称</span>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="你的昵称"
-                  className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
-                  disabled={loading}
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-text-secondary">学号</span>
-                <input
-                  type="text"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="你的学号"
-                  className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
-                  disabled={loading}
-                />
-              </label>
-            </div>
 
             <button
               type="submit"

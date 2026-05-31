@@ -6,8 +6,9 @@ import "errors"
 var (
 	ErrUserNotFound      = errors.New("用户不存在")
 	ErrEmailAlreadyExists = errors.New("邮箱已被注册")
-	ErrInvalidEmail      = errors.New("仅支持 .edu 邮箱注册")
+	ErrInvalidEmail      = errors.New("仅支持 @std.uestc.edu.cn 邮箱注册")
 	ErrWrongPassword     = errors.New("密码错误")
 	ErrEmailNotVerified  = errors.New("邮箱未验证，请先验证邮箱")
 	ErrInvalidToken      = errors.New("无效的验证 token")
+	ErrInvalidCode       = errors.New("验证码错误或已过期")
 )

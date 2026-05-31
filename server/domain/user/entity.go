@@ -96,9 +96,10 @@ func (u *User) ToResponseWithContact() UserResponse {
 // RegisterRequest 注册请求
 type RegisterRequest struct {
 	Email     string `json:"email" binding:"required,email"`
+	Code      string `json:"code" binding:"required"`
 	Password  string `json:"password" binding:"required,min=6"`
-	Nickname  string `json:"nickname" binding:"required"`
-	StudentID string `json:"student_id" binding:"required"`
+	Nickname  string `json:"nickname"`
+	StudentID string `json:"student_id"`
 }
 
 // LoginRequest 登录请求

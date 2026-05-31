@@ -223,7 +223,7 @@ function UserDetail() {
 
         {isSelf && (
           <button
-            onClick={() => navigate('/settings/availability')}
+            onClick={() => navigate('/settings')}
             className="mt-4 w-full py-2.5 rounded-xl border border-dashed border-border text-text-secondary text-sm
                        font-medium hover:border-brand-300 hover:text-brand-600 transition cursor-pointer bg-transparent"
           >

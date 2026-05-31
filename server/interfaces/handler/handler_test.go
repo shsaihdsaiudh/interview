@@ -65,8 +65,8 @@ func setupRouter() *gin.Engine {
 
 		auth := v1.Group("/auth")
 		{
+			auth.POST("/send-code", userH.SendCode)
 			auth.POST("/register", userH.Register)
-			auth.GET("/verify-email", userH.VerifyEmail)
 			auth.POST("/login", userH.Login)
 
 			authRequired := auth.Group("")
@@ -137,36 +137,33 @@ func parseJSON(w *httptest.ResponseRecorder) map[string]interface{} {
 	return result
 }
 
-func registerAndVerify(t *testing.T, email, password, nickname, studentID string) string {
+// registerHelper 新注册流程：发验证码 → 注册（直接返回 JWT）。
+func registerHelper(t *testing.T, email, password, nickname, studentID string) string {
 	t.Helper()
 
-	body := `{"email":"` + email + `","password":"` + password + `","nickname":"` + nickname + `","student_id":"` + studentID + `"}`
-	w := doJSON("POST", "/api/v1/auth/register", body)
+	// 1. 发送验证码
+	w := doJSON("POST", "/api/v1/auth/send-code", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("send-code: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 2. 从 service 中获取验证码（集成测试中通过全局 testUserSvc 访问）
+	code := testUserSvc.VerificationCodeForTest(email)
+	if code == "" {
+		t.Fatal("verification code not found")
+	}
+
+	// 3. 注册
+	regBody := `{"email":"` + email + `","code":"` + code + `","password":"` + password + `","nickname":"` + nickname + `","student_id":"` + studentID + `"}`
+	w = doJSON("POST", "/api/v1/auth/register", regBody)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("register: expected 201, got %d: %s", w.Code, w.Body.String())
-	}
-
-	u, err := testRepo.FindByEmail(email)
-	if err != nil {
-		t.Fatalf("find user after register: %v", err)
-	}
-
-	verifyURL := "/api/v1/auth/verify-email?token=" + u.VerifyToken
-	w = doJSON("GET", verifyURL, "")
-	if w.Code != http.StatusOK {
-		t.Fatalf("verify email: expected 200, got %d: %s", w.Code, w.Body.String())
-	}
-
-	loginBody := `{"email":"` + email + `","password":"` + password + `"}`
-	w = doJSON("POST", "/api/v1/auth/login", loginBody)
-	if w.Code != http.StatusOK {
-		t.Fatalf("login: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	resp := parseJSON(w)
 	token, ok := resp["token"].(string)
 	if !ok || token == "" {
-		t.Fatal("no token in login response")
+		t.Fatal("no token in register response")
 	}
 	return token
 }
@@ -193,48 +190,37 @@ func TestHandler_Ping(t *testing.T) {
 // 认证流程
 // =============================================================================
 
-func TestHandler_Register_InvalidEmail(t *testing.T) {
-	body := `{"email":"alice@gmail.com","password":"123456","nickname":"Alice","student_id":"S001"}`
-	w := doJSON("POST", "/api/v1/auth/register", body)
+func TestHandler_SendCode_InvalidEmail(t *testing.T) {
+	w := doJSON("POST", "/api/v1/auth/send-code", `{"email":"alice@gmail.com"}`)
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 for non-edu email, got %d", w.Code)
+		t.Errorf("expected 400 for non-uestc email, got %d", w.Code)
+	}
+}
+
+func TestHandler_Register_InvalidCode(t *testing.T) {
+	email := "badcode@std.uestc.edu.cn"
+	doJSON("POST", "/api/v1/auth/send-code", `{"email":"`+email+`"}`)
+
+	w := doJSON("POST", "/api/v1/auth/register", `{"email":"`+email+`","code":"000000","password":"123456"}`)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 for wrong code, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestHandler_Register_Duplicate(t *testing.T) {
-	email := "dup2@school.edu"
-	body := `{"email":"` + email + `","password":"123456","nickname":"Dup","student_id":"D001"}`
+	email := "dup3@std.uestc.edu.cn"
+	_ = registerHelper(t, email, "123456", "Dup", "D001")
 
-	w := doJSON("POST", "/api/v1/auth/register", body)
-	if w.Code != http.StatusCreated {
-		t.Fatalf("first register: %d: %s", w.Code, w.Body.String())
-	}
-
-	w = doJSON("POST", "/api/v1/auth/register", body)
+	// 尝试重复注册
+	w := doJSON("POST", "/api/v1/auth/send-code", `{"email":"`+email+`"}`)
 	if w.Code != http.StatusConflict {
-		t.Errorf("duplicate: expected 409, got %d", w.Code)
-	}
-}
-
-func TestHandler_Login_NotVerified(t *testing.T) {
-	email := "unverified2@school.edu"
-	body := `{"email":"` + email + `","password":"123456","nickname":"UV","student_id":"U001"}`
-
-	w := doJSON("POST", "/api/v1/auth/register", body)
-	if w.Code != http.StatusCreated {
-		t.Fatalf("register: %d", w.Code)
-	}
-
-	w = doJSON("POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"123456"}`)
-	if w.Code != http.StatusForbidden {
-		t.Errorf("expected 403 for unverified login, got %d", w.Code)
+		t.Errorf("send-code duplicate: expected 409, got %d", w.Code)
 	}
 }
 
 func TestHandler_Login_WrongPassword(t *testing.T) {
-	email := "wrongpw2@school.edu"
-	token := registerAndVerify(t, email, "correct", "WP", "W001")
-	_ = token
+	email := "wrongpw3@std.uestc.edu.cn"
+	_ = registerHelper(t, email, "correct", "WP", "W001")
 
 	w := doJSON("POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"wrong"}`)
 	if w.Code != http.StatusUnauthorized {
@@ -243,7 +229,7 @@ func TestHandler_Login_WrongPassword(t *testing.T) {
 }
 
 func TestHandler_RegisterLoginMe_FullFlow(t *testing.T) {
-	token := registerAndVerify(t, "fullflow2@school.edu", "pass123", "FullFlow", "F001")
+	token := registerHelper(t, "fullflow3@std.uestc.edu.cn", "pass123", "FullFlow", "F001")
 
 	w := doJSONWithToken("GET", "/api/v1/auth/me", "", token)
 	if w.Code != http.StatusOK {
@@ -251,7 +237,7 @@ func TestHandler_RegisterLoginMe_FullFlow(t *testing.T) {
 	}
 
 	resp := parseJSON(w)
-	if resp["email"] != "fullflow2@school.edu" {
+	if resp["email"] != "fullflow3@std.uestc.edu.cn" {
 		t.Errorf("email = %v", resp["email"])
 	}
 }
@@ -261,7 +247,7 @@ func TestHandler_RegisterLoginMe_FullFlow(t *testing.T) {
 // =============================================================================
 
 func TestHandler_GetProfile(t *testing.T) {
-	token := registerAndVerify(t, "profile2@school.edu", "pass123", "Profile", "P001")
+	token := registerHelper(t, "profile3@std.uestc.edu.cn", "pass123", "Profile", "P001")
 
 	w := doJSONWithToken("GET", "/api/v1/profile", "", token)
 	if w.Code != http.StatusOK {
@@ -270,7 +256,7 @@ func TestHandler_GetProfile(t *testing.T) {
 }
 
 func TestHandler_UpdateProfile(t *testing.T) {
-	token := registerAndVerify(t, "updprof2@school.edu", "pass123", "OldName", "U001")
+	token := registerHelper(t, "updprof3@std.uestc.edu.cn", "pass123", "OldName", "U001")
 
 	body := `{"nickname":"NewName","department":"Math"}`
 	w := doJSONWithToken("PUT", "/api/v1/profile", body, token)
@@ -280,8 +266,8 @@ func TestHandler_UpdateProfile(t *testing.T) {
 }
 
 func TestHandler_ListUsers(t *testing.T) {
-	registerAndVerify(t, "list1a@school.edu", "pass123", "L1", "L001")
-	registerAndVerify(t, "list2a@school.edu", "pass123", "L2", "L002")
+	registerHelper(t, "list1b@std.uestc.edu.cn", "pass123", "L1", "L001")
+	registerHelper(t, "list2b@std.uestc.edu.cn", "pass123", "L2", "L002")
 
 	w := doJSON("GET", "/api/v1/users", "")
 	if w.Code != http.StatusOK {
@@ -294,7 +280,7 @@ func TestHandler_ListUsers(t *testing.T) {
 // =============================================================================
 
 func TestHandler_Availability_CRUD(t *testing.T) {
-	token := registerAndVerify(t, "avail2@school.edu", "pass123", "Avail", "A001")
+	token := registerHelper(t, "avail3@std.uestc.edu.cn", "pass123", "Avail", "A001")
 
 	body := `{"date":"2099-12-31","start_time":"10:00","end_time":"11:00"}`
 	w := doJSONWithToken("POST", "/api/v1/availability", body, token)
@@ -321,8 +307,8 @@ func TestHandler_Availability_CRUD(t *testing.T) {
 // =============================================================================
 
 func TestHandler_Appointment_FullFlow(t *testing.T) {
-	mentorToken := registerAndVerify(t, "mentor3@school.edu", "pass123", "MentorFlow", "MF001")
-	studentToken := registerAndVerify(t, "student3@school.edu", "pass123", "StudentFlow", "SF001")
+	mentorToken := registerHelper(t, "mentor4@std.uestc.edu.cn", "pass123", "MentorFlow", "MF001")
+	studentToken := registerHelper(t, "student4@std.uestc.edu.cn", "pass123", "StudentFlow", "SF001")
 
 	w := doJSONWithToken("POST", "/api/v1/availability", `{"date":"2099-12-31","start_time":"14:00","end_time":"15:00"}`, mentorToken)
 	if w.Code != http.StatusCreated {
@@ -360,8 +346,8 @@ func TestHandler_Appointment_FullFlow(t *testing.T) {
 }
 
 func TestHandler_Appointment_Reject(t *testing.T) {
-	mentorToken := registerAndVerify(t, "rej-m2@school.edu", "pass123", "RejMentor", "RM001")
-	studentToken := registerAndVerify(t, "rej-s2@school.edu", "pass123", "RejStudent", "RS001")
+	mentorToken := registerHelper(t, "rej-m3@std.uestc.edu.cn", "pass123", "RejMentor", "RM001")
+	studentToken := registerHelper(t, "rej-s3@std.uestc.edu.cn", "pass123", "RejStudent", "RS001")
 
 	w := doJSONWithToken("POST", "/api/v1/availability", `{"date":"2099-12-31","start_time":"16:00","end_time":"17:00"}`, mentorToken)
 	resp := parseJSON(w)
@@ -382,7 +368,7 @@ func TestHandler_Appointment_Reject(t *testing.T) {
 }
 
 func TestHandler_Appointment_CannotBookOwnSlot(t *testing.T) {
-	token := registerAndVerify(t, "selfbook2@school.edu", "pass123", "SelfBook", "SB001")
+	token := registerHelper(t, "selfbook3@std.uestc.edu.cn", "pass123", "SelfBook", "SB001")
 
 	w := doJSONWithToken("POST", "/api/v1/availability", `{"date":"2099-12-31","start_time":"09:00","end_time":"10:00"}`, token)
 	resp := parseJSON(w)

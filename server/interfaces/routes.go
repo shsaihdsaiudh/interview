@@ -30,6 +30,7 @@ func RegisterRoutes(
 		// ── 认证路由（无需登录）──
 		auth := v1.Group("/auth")
 		{
+			auth.POST("/send-code", userH.SendCode)
 			auth.POST("/register", userH.Register)
 			auth.GET("/verify-email", userH.VerifyEmail)
 			auth.POST("/login", userH.Login)

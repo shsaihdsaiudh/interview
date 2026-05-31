@@ -77,9 +77,9 @@ function Home() {
       <section className="max-w-5xl mx-auto px-6 pb-24">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { title: '找人面试', desc: '浏览可预约的面试官，找到方向匹配的同学', to: '/find' },
-            { title: '管理预约', desc: '查看收到的和发出的面试预约，一键接受或拒绝', to: '/appointments' },
-            { title: '设置时间', desc: '编辑个人资料，管理空闲时间段方便他人预约', to: '/settings/availability' },
+            { title: '找人预约', desc: '浏览同学、选择时段发起预约，追踪发出的预约', to: '/find' },
+            { title: '我的面试间', desc: '发布可预约时间，处理收到的预约请求', to: '/appointments' },
+            { title: '个人设置', desc: '编辑个人资料、昵称、学号、联系方式', to: '/settings' },
             { title: '帖子广场', desc: '分享面试经验，讨论求职话题', to: '/posts' },
           ].map((f) => (
             <Link

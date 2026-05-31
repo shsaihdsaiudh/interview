@@ -7,7 +7,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -20,19 +22,47 @@ import (
 // UserService 用户用例编排。
 // 依赖 UserRepository 接口而非具体实现 — 依赖反转。
 type UserService struct {
-	userRepo user.UserRepository
-	apptRepo appointment.AppointmentRepository
+	userRepo          user.UserRepository
+	apptRepo          appointment.AppointmentRepository
+	verificationCodes map[string]string // email → code（开发阶段内存存储）
+	mu                sync.Mutex
 }
 
 // NewUserService 创建用户服务。
 func NewUserService(userRepo user.UserRepository, apptRepo appointment.AppointmentRepository) *UserService {
-	return &UserService{userRepo: userRepo, apptRepo: apptRepo}
+	return &UserService{
+		userRepo:          userRepo,
+		apptRepo:          apptRepo,
+		verificationCodes: make(map[string]string),
+	}
 }
 
-// Register 注册新用户。
-func (s *UserService) Register(req user.RegisterRequest) (*user.UserResponse, error) {
-	// 校验 .edu 邮箱
-	if !strings.HasSuffix(req.Email, ".edu") {
+// SendCode 发送邮箱验证码（开发阶段打印到日志）。
+func (s *UserService) SendCode(email string) error {
+	if !strings.HasSuffix(email, "@std.uestc.edu.cn") {
+		return user.ErrInvalidEmail
+	}
+	if _, err := s.userRepo.FindByEmail(email); err == nil {
+		return user.ErrEmailAlreadyExists
+	}
+
+	code, err := generateVerificationCode()
+	if err != nil {
+		return fmt.Errorf("生成验证码失败: %w", err)
+	}
+
+	s.mu.Lock()
+	s.verificationCodes[email] = code
+	s.mu.Unlock()
+
+	log.Printf("📧 [DEV] 验证码已发送到 %s: %s", email, code)
+	return nil
+}
+
+// Register 注册新用户。校验验证码，通过后直接创建已验证用户并返回 JWT。
+func (s *UserService) Register(req user.RegisterRequest) (*user.AuthResponse, error) {
+	// 校验 @std.uestc.edu.cn 邮箱（仅限本校学生）
+	if !strings.HasSuffix(req.Email, "@std.uestc.edu.cn") {
 		return nil, user.ErrInvalidEmail
 	}
 
@@ -41,26 +71,35 @@ func (s *UserService) Register(req user.RegisterRequest) (*user.UserResponse, er
 		return nil, user.ErrEmailAlreadyExists
 	}
 
+	// 校验验证码
+	s.mu.Lock()
+	storedCode, ok := s.verificationCodes[req.Email]
+	if ok {
+		delete(s.verificationCodes, req.Email) // 一次性使用
+	}
+	s.mu.Unlock()
+	if !ok || storedCode != req.Code {
+		return nil, user.ErrInvalidCode
+	}
+
 	// bcrypt 加密密码
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("密码加密失败: %w", err)
 	}
 
-	// 生成邮箱验证 token
-	verifyToken, err := generateRandomHex(32)
-	if err != nil {
-		return nil, fmt.Errorf("生成验证 token 失败: %w", err)
+	nickname := req.Nickname
+	if nickname == "" {
+		nickname = req.Email // 默认昵称为邮箱前缀
 	}
 
 	u := &user.User{
 		Email:         req.Email,
 		PasswordHash:  string(hash),
-		Nickname:      req.Nickname,
+		Nickname:      nickname,
 		StudentID:     req.StudentID,
 		Tags:          []string{},
-		EmailVerified: false,
-		VerifyToken:   verifyToken,
+		EmailVerified: true, // 已验证
 		CreatedAt:     time.Now(),
 	}
 
@@ -68,12 +107,16 @@ func (s *UserService) Register(req user.RegisterRequest) (*user.UserResponse, er
 		return nil, err
 	}
 
-	// 开发阶段：打印验证链接到日志
-	verifyURL := fmt.Sprintf("http://localhost:8080/api/v1/auth/verify-email?token=%s", verifyToken)
-	log.Printf("📧 [DEV] 邮箱验证链接: %s", verifyURL)
+	// 签发 JWT
+	jwtToken, err := auth.GenerateJWT(u.Email)
+	if err != nil {
+		return nil, fmt.Errorf("JWT 生成失败: %w", err)
+	}
 
-	resp := u.ToResponse()
-	return &resp, nil
+	return &user.AuthResponse{
+		Token: jwtToken,
+		User:  u.ToResponse(),
+	}, nil
 }
 
 // VerifyEmail 验证邮箱。
@@ -205,6 +248,13 @@ func (s *UserService) hasAcceptedAppointment(user1, user2 string) bool {
 // 辅助函数
 // =============================================================================
 
+// VerificationCodeForTest 仅供测试使用：获取指定邮箱的验证码。
+func (s *UserService) VerificationCodeForTest(email string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.verificationCodes[email]
+}
+
 // generateRandomHex 生成指定字节数的随机 hex 字符串。
 func generateRandomHex(bytes int) (string, error) {
 	b := make([]byte, bytes)
@@ -212,4 +262,17 @@ func generateRandomHex(bytes int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// generateVerificationCode 生成 6 位数字验证码。
+func generateVerificationCode() (string, error) {
+	code := ""
+	for i := 0; i < 6; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(10))
+		if err != nil {
+			return "", err
+		}
+		code += fmt.Sprintf("%d", n.Int64())
+	}
+	return code, nil
 }
