@@ -1,7 +1,9 @@
 package application
 
 import (
+	"errors"
 	"testing"
+	"time"
 
 	"interview-server/domain/appointment"
 	"interview-server/domain/user"
@@ -188,7 +190,7 @@ func newTestUserService(ur *mockUserRepo, ar *mockApptRepo) *UserService {
 	return &UserService{
 		userRepo:          ur,
 		apptRepo:          ar,
-		verificationCodes: make(map[string]string),
+		verificationCodes: make(map[string]verificationCode),
 	}
 }
 
@@ -197,7 +199,7 @@ func registerHelper(svc *UserService, email, password, nickname, studentID strin
 	if err := svc.SendCode(email); err != nil {
 		return nil, err
 	}
-	code := svc.verificationCodes[email]
+	code := svc.VerificationCodeForTest(email)
 	return svc.Register(user.RegisterRequest{
 		Email:     email,
 		Code:      code,
@@ -221,7 +223,7 @@ func TestUserService_SendCode(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		code := svc.verificationCodes["alice@std.uestc.edu.cn"]
+		code := svc.VerificationCodeForTest("alice@std.uestc.edu.cn")
 		if len(code) != 6 {
 			t.Errorf("expected 6-digit code, got %q", code)
 		}
@@ -248,6 +250,22 @@ func TestUserService_SendCode(t *testing.T) {
 		err := svc.SendCode("alice@std.uestc.edu.cn")
 		if err != user.ErrEmailAlreadyExists {
 			t.Errorf("expected ErrEmailAlreadyExists, got %v", err)
+		}
+	})
+
+	t.Run("repository error", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+		dbErr := errors.New("database unavailable")
+		ur.findByEmailErr = dbErr
+
+		err := svc.SendCode("alice@std.uestc.edu.cn")
+		if err != dbErr {
+			t.Errorf("expected repository error, got %v", err)
+		}
+		if code := svc.VerificationCodeForTest("alice@std.uestc.edu.cn"); code != "" {
+			t.Errorf("verification code should not be stored on repo error, got %q", code)
 		}
 	})
 }
@@ -281,13 +299,35 @@ func TestUserService_Register(t *testing.T) {
 		}
 	})
 
+	t.Run("normalizes email before storing user", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		if err := svc.SendCode(" MixedCase@STD.UESTC.EDU.CN "); err != nil {
+			t.Fatalf("unexpected send code error: %v", err)
+		}
+		code := svc.VerificationCodeForTest("mixedcase@std.uestc.edu.cn")
+		resp, err := svc.Register(user.RegisterRequest{
+			Email:    " MixedCase@STD.UESTC.EDU.CN ",
+			Code:     code,
+			Password: "123456",
+		})
+		if err != nil {
+			t.Fatalf("unexpected register error: %v", err)
+		}
+		if resp.User.Email != "mixedcase@std.uestc.edu.cn" {
+			t.Errorf("email = %q, want normalized", resp.User.Email)
+		}
+	})
+
 	t.Run("register without nickname defaults to email", func(t *testing.T) {
 		ur := newMockUserRepo()
 		ar := newMockApptRepo()
 		svc := newTestUserService(ur, ar)
 
 		svc.SendCode("minimal@std.uestc.edu.cn")
-		code := svc.verificationCodes["minimal@std.uestc.edu.cn"]
+		code := svc.VerificationCodeForTest("minimal@std.uestc.edu.cn")
 		resp, err := svc.Register(user.RegisterRequest{
 			Email:    "minimal@std.uestc.edu.cn",
 			Code:     code,
@@ -331,6 +371,36 @@ func TestUserService_Register(t *testing.T) {
 		if err != user.ErrInvalidCode {
 			t.Errorf("expected ErrInvalidCode, got %v", err)
 		}
+		if svc.VerificationCodeForTest("alice@std.uestc.edu.cn") == "" {
+			t.Error("wrong code should not consume the stored verification code")
+		}
+	})
+
+	t.Run("expired verification code", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		email := "expired@std.uestc.edu.cn"
+		if err := svc.SendCode(email); err != nil {
+			t.Fatalf("unexpected send code error: %v", err)
+		}
+		code := svc.VerificationCodeForTest(email)
+		svc.verificationCodes[email] = verificationCode{
+			Code:      code,
+			ExpiresAt: time.Now().Add(-time.Minute),
+		}
+		_, err := svc.Register(user.RegisterRequest{
+			Email:    email,
+			Code:     code,
+			Password: "123456",
+		})
+		if err != user.ErrInvalidCode {
+			t.Errorf("expected ErrInvalidCode, got %v", err)
+		}
+		if svc.VerificationCodeForTest(email) != "" {
+			t.Error("expired code should be cleared")
+		}
 	})
 
 	t.Run("duplicate email", func(t *testing.T) {
@@ -340,18 +410,31 @@ func TestUserService_Register(t *testing.T) {
 
 		registerHelper(svc, "bob@std.uestc.edu.cn", "123456", "Bob", "S002")
 
-		// 再次注册同一邮箱（需要先发新验证码）
-		svc.SendCode("bob@std.uestc.edu.cn")
-		code := svc.verificationCodes["bob@std.uestc.edu.cn"]
-		_, err := svc.Register(user.RegisterRequest{
-			Email:     "bob@std.uestc.edu.cn",
-			Code:      code,
-			Password:  "123456",
-			Nickname:  "Bob2",
-			StudentID: "S003",
-		})
+		err := svc.SendCode("bob@std.uestc.edu.cn")
 		if err != user.ErrEmailAlreadyExists {
 			t.Errorf("expected ErrEmailAlreadyExists, got %v", err)
+		}
+	})
+
+	t.Run("repository error while checking duplicate", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+		dbErr := errors.New("database unavailable")
+		email := "repoerr@std.uestc.edu.cn"
+		svc.verificationCodes[email] = verificationCode{
+			Code:      "123456",
+			ExpiresAt: time.Now().Add(time.Minute),
+		}
+		ur.findByEmailErr = dbErr
+
+		_, err := svc.Register(user.RegisterRequest{
+			Email:    email,
+			Code:     "123456",
+			Password: "123456",
+		})
+		if err != dbErr {
+			t.Errorf("expected repository error, got %v", err)
 		}
 	})
 }
@@ -481,6 +564,39 @@ func TestUserService_UpdateProfile(t *testing.T) {
 			t.Errorf("expected ErrUserNotFound, got %v", err)
 		}
 	})
+}
+
+// =============================================================================
+// GetProfile
+// =============================================================================
+
+func TestUserService_GetProfile(t *testing.T) {
+	ur := newMockUserRepo()
+	ar := newMockApptRepo()
+	svc := newTestUserService(ur, ar)
+
+	registerHelper(svc, "profile@std.uestc.edu.cn", "123456", "Profile", "P001")
+	u, _ := ur.FindByEmail("profile@std.uestc.edu.cn")
+	u.ContactInfo = "wechat-profile"
+	ur.Update(u)
+	ar.availabilities["slot-1"] = &appointment.Availability{
+		ID:        "slot-1",
+		UserID:    "profile@std.uestc.edu.cn",
+		Date:      "2099-12-31",
+		StartTime: "09:00",
+		EndTime:   "10:00",
+	}
+
+	detail, err := svc.GetProfile("profile@std.uestc.edu.cn")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if detail.User.ContactInfo != "wechat-profile" {
+		t.Errorf("contact_info = %q, want own contact", detail.User.ContactInfo)
+	}
+	if len(detail.Availabilities) != 1 {
+		t.Errorf("availabilities len = %d, want 1", len(detail.Availabilities))
+	}
 }
 
 // =============================================================================

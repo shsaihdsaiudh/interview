@@ -40,7 +40,7 @@ npm run dev
 
 打开 `http://localhost:5173`。
 
-> 注册时需要使用 `.edu` 结尾的邮箱。开发阶段验证链接会打印在后端控制台。
+> 注册时需要使用 `@std.uestc.edu.cn` 结尾的邮箱。开发阶段验证码会打印在后端控制台。
 
 ### 环境变量
 
@@ -70,7 +70,7 @@ npm run dev
 
 ## 功能
 
-- **用户注册/登录** — `.edu` 邮箱注册 + 邮箱验证 + JWT 认证
+- **用户注册/登录** — `@std.uestc.edu.cn` 邮箱验证码注册 + JWT 认证
 - **用户广场** — 浏览所有已验证用户，按面试方向标签筛选
 - **用户详情** — 查看个人资料 + 空闲时间段 → 选择时间发起预约
 - **预约管理** — 双 Tab（收到/发出），接受或拒绝预约请求
@@ -85,10 +85,11 @@ npm run dev
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/ping` | 健康检查 |
-| `POST` | `/auth/register` | 注册（限制 `.edu` 邮箱） |
+| `POST` | `/auth/send-code` | 发送注册邮箱验证码 |
+| `POST` | `/auth/register` | 使用验证码注册（限制 `@std.uestc.edu.cn` 邮箱） |
 | `POST` | `/auth/login` | 登录 → 返回 JWT |
 | `GET` | `/users` | 用户列表 |
-| `GET` | `/users/:id` | 用户详情 + 空闲时间 |
+| `GET` | `/users/:id` | 用户详情 + 空闲时间；登录且双方有已接受预约时返回联系方式 |
 
 ### 需认证（Header: `Authorization: Bearer <token>`）
 

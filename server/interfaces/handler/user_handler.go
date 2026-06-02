@@ -147,7 +147,7 @@ func (h *UserHandler) Me(c *gin.Context) {
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	email := c.GetString("user_email")
 
-	detail, err := h.userSvc.GetUserDetail(email, email)
+	detail, err := h.userSvc.GetProfile(email)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
 		return

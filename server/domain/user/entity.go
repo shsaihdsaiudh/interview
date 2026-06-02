@@ -4,6 +4,11 @@ package user
 
 import "time"
 
+const (
+	AccountStatusPendingVerification = "pending_verification"
+	AccountStatusActive              = "active"
+)
+
 // User 是用户聚合根。
 // 以 Email 作为唯一标识符（同时也是 PostgreSQL 主键）。
 type User struct {
@@ -25,6 +30,14 @@ type User struct {
 // IsVerified 检查邮箱是否已验证。
 func (u *User) IsVerified() bool {
 	return u.EmailVerified
+}
+
+// AccountStatus 返回当前账号状态。
+func (u *User) AccountStatus() string {
+	if !u.EmailVerified {
+		return AccountStatusPendingVerification
+	}
+	return AccountStatusActive
 }
 
 // ClearVerifyToken 清除验证 token（一次性使用）。
@@ -67,6 +80,7 @@ type UserResponse struct {
 	Avatar        string    `json:"avatar"`
 	ContactInfo   string    `json:"contact_info,omitempty"`
 	EmailVerified bool      `json:"email_verified"`
+	AccountStatus string    `json:"account_status"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
@@ -80,6 +94,7 @@ func (u *User) ToResponse() UserResponse {
 		Tags:          u.Tags,
 		Avatar:        u.Avatar,
 		EmailVerified: u.EmailVerified,
+		AccountStatus: u.AccountStatus(),
 		CreatedAt:     u.CreatedAt,
 	}
 }

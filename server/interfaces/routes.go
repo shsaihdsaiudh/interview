@@ -44,7 +44,7 @@ func RegisterRoutes(
 
 		// ── 用户路由（部分公开）──
 		v1.GET("/users", userH.ListUsers)
-		v1.GET("/users/:id", userH.GetUser)
+		v1.GET("/users/:id", middleware.OptionalJWTAuth(), userH.GetUser)
 
 		// ── 需要登录的路由 ──
 		protected := v1.Group("")

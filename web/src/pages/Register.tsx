@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiPost, setToken } from '../api/client';
+import { apiPost, getApiErrorMessage, setToken } from '../api/client';
 import { setUser, notifyAuthChange } from '../components/Navbar';
 
 interface RegisterResponse {
@@ -9,6 +9,7 @@ interface RegisterResponse {
     email: string;
     nickname: string;
     email_verified: boolean;
+    account_status: string;
   };
 }
 
@@ -50,10 +51,7 @@ function Register() {
         });
       }, 1000);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        '发送验证码失败';
-      setError(msg);
+      setError(getApiErrorMessage(err, '发送验证码失败'));
     } finally {
       setSending(false);
     }
@@ -84,10 +82,7 @@ function Register() {
       notifyAuthChange();
       navigate('/');
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        '注册失败，请稍后重试';
-      setError(msg);
+      setError(getApiErrorMessage(err, '注册失败，请稍后重试'));
     } finally {
       setLoading(false);
     }

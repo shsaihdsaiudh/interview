@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiGet, apiPut } from '../api/client';
+import { apiGet, apiPut, getApiErrorMessage } from '../api/client';
 import { getUser, setUser, notifyAuthChange } from '../components/Navbar';
 
 interface ProfileData {
@@ -12,6 +12,7 @@ interface ProfileData {
     avatar: string;
     contact_info: string;
     email_verified: boolean;
+    account_status: string;
   };
 }
 
@@ -60,8 +61,8 @@ function Settings() {
       const u = getUser();
       if (u) { setUser({ ...u, nickname }); notifyAuthChange(); }
       showMsg('保存成功');
-    } catch (err: any) {
-      showMsg(err?.response?.data?.error || '保存失败');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '保存失败'));
     }
   };
 

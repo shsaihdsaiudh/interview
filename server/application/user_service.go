@@ -5,6 +5,7 @@ package application
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -24,26 +25,37 @@ import (
 type UserService struct {
 	userRepo          user.UserRepository
 	apptRepo          appointment.AppointmentRepository
-	verificationCodes map[string]string // email → code（开发阶段内存存储）
+	verificationCodes map[string]verificationCode // email → code（开发阶段内存存储）
 	mu                sync.Mutex
 }
+
+type verificationCode struct {
+	Code      string
+	ExpiresAt time.Time
+}
+
+const verificationCodeTTL = 10 * time.Minute
 
 // NewUserService 创建用户服务。
 func NewUserService(userRepo user.UserRepository, apptRepo appointment.AppointmentRepository) *UserService {
 	return &UserService{
 		userRepo:          userRepo,
 		apptRepo:          apptRepo,
-		verificationCodes: make(map[string]string),
+		verificationCodes: make(map[string]verificationCode),
 	}
 }
 
 // SendCode 发送邮箱验证码（开发阶段打印到日志）。
 func (s *UserService) SendCode(email string) error {
+	email = normalizeEmail(email)
 	if !strings.HasSuffix(email, "@std.uestc.edu.cn") {
 		return user.ErrInvalidEmail
 	}
+
 	if _, err := s.userRepo.FindByEmail(email); err == nil {
 		return user.ErrEmailAlreadyExists
+	} else if !errors.Is(err, user.ErrUserNotFound) {
+		return err
 	}
 
 	code, err := generateVerificationCode()
@@ -52,7 +64,10 @@ func (s *UserService) SendCode(email string) error {
 	}
 
 	s.mu.Lock()
-	s.verificationCodes[email] = code
+	s.verificationCodes[email] = verificationCode{
+		Code:      code,
+		ExpiresAt: time.Now().Add(verificationCodeTTL),
+	}
 	s.mu.Unlock()
 
 	log.Printf("📧 [DEV] 验证码已发送到 %s: %s", email, code)
@@ -61,6 +76,8 @@ func (s *UserService) SendCode(email string) error {
 
 // Register 注册新用户。校验验证码，通过后直接创建已验证用户并返回 JWT。
 func (s *UserService) Register(req user.RegisterRequest) (*user.AuthResponse, error) {
+	req.Email = normalizeEmail(req.Email)
+
 	// 校验 @std.uestc.edu.cn 邮箱（仅限本校学生）
 	if !strings.HasSuffix(req.Email, "@std.uestc.edu.cn") {
 		return nil, user.ErrInvalidEmail
@@ -69,18 +86,22 @@ func (s *UserService) Register(req user.RegisterRequest) (*user.AuthResponse, er
 	// 检查邮箱是否已注册
 	if _, err := s.userRepo.FindByEmail(req.Email); err == nil {
 		return nil, user.ErrEmailAlreadyExists
+	} else if !errors.Is(err, user.ErrUserNotFound) {
+		return nil, err
 	}
 
 	// 校验验证码
 	s.mu.Lock()
 	storedCode, ok := s.verificationCodes[req.Email]
-	if ok {
-		delete(s.verificationCodes, req.Email) // 一次性使用
-	}
-	s.mu.Unlock()
-	if !ok || storedCode != req.Code {
+	if !ok || storedCode.Code != req.Code || time.Now().After(storedCode.ExpiresAt) {
+		if ok && time.Now().After(storedCode.ExpiresAt) {
+			delete(s.verificationCodes, req.Email)
+		}
+		s.mu.Unlock()
 		return nil, user.ErrInvalidCode
 	}
+	delete(s.verificationCodes, req.Email) // 一次性使用
+	s.mu.Unlock()
 
 	// bcrypt 加密密码
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -132,6 +153,8 @@ func (s *UserService) VerifyEmail(token string) error {
 
 // Login 登录。
 func (s *UserService) Login(req user.LoginRequest) (*user.AuthResponse, error) {
+	req.Email = normalizeEmail(req.Email)
+
 	u, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		return nil, user.ErrUserNotFound
@@ -161,6 +184,8 @@ func (s *UserService) Login(req user.LoginRequest) (*user.AuthResponse, error) {
 
 // GetMe 获取当前用户信息。
 func (s *UserService) GetMe(email string) (*user.UserResponse, error) {
+	email = normalizeEmail(email)
+
 	u, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -169,8 +194,30 @@ func (s *UserService) GetMe(email string) (*user.UserResponse, error) {
 	return &resp, nil
 }
 
+// GetProfile 获取自己的完整资料。
+func (s *UserService) GetProfile(email string) (*UserDetailResponse, error) {
+	email = normalizeEmail(email)
+
+	u, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return nil, user.ErrUserNotFound
+	}
+
+	availabilities := s.apptRepo.FindAvailabilitiesByUserID(email)
+	if availabilities == nil {
+		availabilities = []*appointment.Availability{}
+	}
+
+	return &UserDetailResponse{
+		User:           u.ToResponseWithContact(),
+		Availabilities: availabilities,
+	}, nil
+}
+
 // UpdateProfile 更新个人资料。
 func (s *UserService) UpdateProfile(email string, req user.UpdateProfileRequest) (*user.UserResponse, error) {
+	email = normalizeEmail(email)
+
 	u, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, user.ErrUserNotFound
@@ -199,12 +246,15 @@ func (s *UserService) GetAllUsers() []user.UserResponse {
 
 // UserDetailResponse 用户详情响应（含空闲时间）。
 type UserDetailResponse struct {
-	User           user.UserResponse            `json:"user"`
-	Availabilities []*appointment.Availability   `json:"availabilities"`
+	User           user.UserResponse           `json:"user"`
+	Availabilities []*appointment.Availability `json:"availabilities"`
 }
 
 // GetUserDetail 获取用户详情（含空闲时间，可能含联系方式）。
 func (s *UserService) GetUserDetail(email string, requesterEmail string) (*UserDetailResponse, error) {
+	email = normalizeEmail(email)
+	requesterEmail = normalizeEmail(requesterEmail)
+
 	u, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, user.ErrUserNotFound
@@ -216,8 +266,8 @@ func (s *UserService) GetUserDetail(email string, requesterEmail string) (*UserD
 		availabilities = []*appointment.Availability{}
 	}
 
-	// 检查 requester 是否与该用户有 accepted 的预约 — 有则展示联系方式
-	if requesterEmail != "" && s.hasAcceptedAppointment(requesterEmail, email) {
+	// requester 是本人，或双方有 accepted 预约时展示联系方式。
+	if requesterEmail != "" && (requesterEmail == email || s.hasAcceptedAppointment(requesterEmail, email)) {
 		resp.ContactInfo = u.ContactInfo
 	}
 
@@ -252,7 +302,11 @@ func (s *UserService) hasAcceptedAppointment(user1, user2 string) bool {
 func (s *UserService) VerificationCodeForTest(email string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.verificationCodes[email]
+	return s.verificationCodes[normalizeEmail(email)].Code
+}
+
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 // generateRandomHex 生成指定字节数的随机 hex 字符串。

@@ -26,6 +26,26 @@ func TestUser_IsVerified(t *testing.T) {
 }
 
 // =============================================================================
+// AccountStatus
+// =============================================================================
+
+func TestUser_AccountStatus(t *testing.T) {
+	t.Run("pending verification", func(t *testing.T) {
+		u := &User{EmailVerified: false}
+		if u.AccountStatus() != AccountStatusPendingVerification {
+			t.Errorf("AccountStatus = %q, want %q", u.AccountStatus(), AccountStatusPendingVerification)
+		}
+	})
+
+	t.Run("active", func(t *testing.T) {
+		u := &User{EmailVerified: true}
+		if u.AccountStatus() != AccountStatusActive {
+			t.Errorf("AccountStatus = %q, want %q", u.AccountStatus(), AccountStatusActive)
+		}
+	})
+}
+
+// =============================================================================
 // ClearVerifyToken
 // =============================================================================
 
@@ -162,6 +182,9 @@ func TestUser_ToResponse(t *testing.T) {
 	}
 	if resp.EmailVerified != true {
 		t.Error("EmailVerified should be true")
+	}
+	if resp.AccountStatus != AccountStatusActive {
+		t.Errorf("AccountStatus = %q, want %q", resp.AccountStatus, AccountStatusActive)
 	}
 	if !resp.CreatedAt.Equal(now) {
 		t.Errorf("CreatedAt = %v, want %v", resp.CreatedAt, now)

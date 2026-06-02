@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiPost, setToken } from '../api/client';
+import { apiPost, getApiErrorMessage, setToken } from '../api/client';
 import { setUser, notifyAuthChange } from '../components/Navbar';
 
 interface LoginResponse {
@@ -10,6 +10,7 @@ interface LoginResponse {
     nickname: string;
     student_id: string;
     email_verified: boolean;
+    account_status: string;
     created_at: string;
   };
 }
@@ -38,10 +39,7 @@ function Login() {
       notifyAuthChange();
       navigate('/');
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
-        '登录失败，请稍后重试';
-      setError(msg);
+      setError(getApiErrorMessage(err, '登录失败，请稍后重试'));
     } finally {
       setLoading(false);
     }

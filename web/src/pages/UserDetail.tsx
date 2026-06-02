@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiGet, apiPost } from '../api/client';
+import { apiGet, apiPost, getApiErrorMessage } from '../api/client';
 import { getUser } from '../components/Navbar';
 
 interface UserInfo {
@@ -12,6 +12,7 @@ interface UserInfo {
   avatar: string;
   contact_info: string;
   email_verified: boolean;
+  account_status: string;
 }
 
 interface TimeSlot {
@@ -71,9 +72,8 @@ function UserDetail() {
       setBookingSuccess('预约成功，请等待对方确认');
       setBookingId(null);
       setMessage('');
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || '预约失败';
-      setBookingError(msg);
+    } catch (err: unknown) {
+      setBookingError(getApiErrorMessage(err, '预约失败'));
     }
   };
 

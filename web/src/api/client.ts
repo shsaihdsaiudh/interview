@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'auth_user';
+
 const apiClient = axios.create({
   baseURL: 'http://localhost:8080/api/v1',
   timeout: 5000,
@@ -24,6 +27,8 @@ apiClient.interceptors.response.use(
     // 401 时清除过期 token
     if (err.response?.status === 401) {
       removeToken();
+      localStorage.removeItem(USER_KEY);
+      window.dispatchEvent(new Event('auth-change'));
     }
     console.error('API Error:', err);
     return Promise.reject(err);
@@ -31,8 +36,6 @@ apiClient.interceptors.response.use(
 );
 
 // ── Token 管理 ──
-
-const TOKEN_KEY = 'auth_token';
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -67,6 +70,13 @@ export async function apiPut<T>(url: string, data?: unknown): Promise<T> {
 export async function apiDelete<T>(url: string): Promise<T> {
   const res = await apiClient.delete<T>(url);
   return res.data;
+}
+
+export function getApiErrorMessage(err: unknown, fallback: string): string {
+  return (
+    (err as { response?: { data?: { error?: string } } })?.response?.data?.error ||
+    fallback
+  );
 }
 
 export default apiClient;

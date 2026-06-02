@@ -77,7 +77,7 @@ func setupRouter() *gin.Engine {
 		}
 
 		v1.GET("/users", userH.ListUsers)
-		v1.GET("/users/:id", userH.GetUser)
+		v1.GET("/users/:id", middleware.OptionalJWTAuth(), userH.GetUser)
 
 		protected := v1.Group("")
 		protected.Use(middleware.JWTAuth())
@@ -240,6 +240,9 @@ func TestHandler_RegisterLoginMe_FullFlow(t *testing.T) {
 	if resp["email"] != "fullflow3@std.uestc.edu.cn" {
 		t.Errorf("email = %v", resp["email"])
 	}
+	if resp["account_status"] != "active" {
+		t.Errorf("account_status = %v, want active", resp["account_status"])
+	}
 }
 
 // =============================================================================
@@ -249,9 +252,22 @@ func TestHandler_RegisterLoginMe_FullFlow(t *testing.T) {
 func TestHandler_GetProfile(t *testing.T) {
 	token := registerHelper(t, "profile3@std.uestc.edu.cn", "pass123", "Profile", "P001")
 
-	w := doJSONWithToken("GET", "/api/v1/profile", "", token)
+	w := doJSONWithToken("PUT", "/api/v1/profile", `{"contact_info":"wechat-profile3"}`, token)
+	if w.Code != http.StatusOK {
+		t.Fatalf("update profile contact: %d: %s", w.Code, w.Body.String())
+	}
+
+	w = doJSONWithToken("GET", "/api/v1/profile", "", token)
 	if w.Code != http.StatusOK {
 		t.Fatalf("get profile: %d", w.Code)
+	}
+	resp := parseJSON(w)
+	profileUser, ok := resp["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("profile user missing: %s", w.Body.String())
+	}
+	if profileUser["contact_info"] != "wechat-profile3" {
+		t.Errorf("contact_info = %v, want own contact", profileUser["contact_info"])
 	}
 }
 
@@ -310,7 +326,12 @@ func TestHandler_Appointment_FullFlow(t *testing.T) {
 	mentorToken := registerHelper(t, "mentor4@std.uestc.edu.cn", "pass123", "MentorFlow", "MF001")
 	studentToken := registerHelper(t, "student4@std.uestc.edu.cn", "pass123", "StudentFlow", "SF001")
 
-	w := doJSONWithToken("POST", "/api/v1/availability", `{"date":"2099-12-31","start_time":"14:00","end_time":"15:00"}`, mentorToken)
+	w := doJSONWithToken("PUT", "/api/v1/profile", `{"contact_info":"wechat-mentor4"}`, mentorToken)
+	if w.Code != http.StatusOK {
+		t.Fatalf("mentor update contact: %d: %s", w.Code, w.Body.String())
+	}
+
+	w = doJSONWithToken("POST", "/api/v1/availability", `{"date":"2099-12-31","start_time":"14:00","end_time":"15:00"}`, mentorToken)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("mentor add availability: %d: %s", w.Code, w.Body.String())
 	}
@@ -342,6 +363,19 @@ func TestHandler_Appointment_FullFlow(t *testing.T) {
 	acceptResp := parseJSON(w)
 	if status, _ := acceptResp["status"].(string); status != appointment.StatusAccepted {
 		t.Errorf("status = %q, want accepted", status)
+	}
+
+	w = doJSONWithToken("GET", "/api/v1/users/mentor4@std.uestc.edu.cn", "", studentToken)
+	if w.Code != http.StatusOK {
+		t.Fatalf("student get accepted mentor detail: %d: %s", w.Code, w.Body.String())
+	}
+	userDetail := parseJSON(w)
+	detailUser, ok := userDetail["user"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("detail user missing: %s", w.Body.String())
+	}
+	if detailUser["contact_info"] != "wechat-mentor4" {
+		t.Errorf("accepted mentor contact_info = %v, want wechat-mentor4", detailUser["contact_info"])
 	}
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { apiGet, apiPut, apiPost, apiDelete } from '../api/client';
+import { apiGet, apiPut, apiPost, apiDelete, getApiErrorMessage } from '../api/client';
 
 interface UserInfo {
   email: string;
@@ -9,6 +9,7 @@ interface UserInfo {
   department: string;
   student_id: string;
   contact_info: string;
+  account_status: string;
 }
 
 interface TimeSlot {
@@ -96,8 +97,8 @@ function Appointments() {
       setDate(''); setStartTime(''); setEndTime('');
       showMsg('已发布');
       fetchSlots();
-    } catch (err: any) {
-      showMsg(err?.response?.data?.error || '发布失败');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '发布失败'));
     }
   };
 
@@ -106,8 +107,8 @@ function Appointments() {
       await apiDelete(`/availability/${id}`);
       showMsg('已删除');
       fetchSlots();
-    } catch (err: any) {
-      showMsg(err?.response?.data?.error || '删除失败');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '删除失败'));
     }
   };
 
@@ -115,8 +116,8 @@ function Appointments() {
     try {
       await apiPut(`/appointments/${id}/accept`);
       fetchAppointments();
-    } catch (err: any) {
-      showMsg(err?.response?.data?.error || '操作失败');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '操作失败'));
     }
   };
 
@@ -125,8 +126,8 @@ function Appointments() {
     try {
       await apiPut(`/appointments/${id}/reject`, { reason: reason || '' });
       fetchAppointments();
-    } catch (err: any) {
-      showMsg(err?.response?.data?.error || '操作失败');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '操作失败'));
     }
   };
 
