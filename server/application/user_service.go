@@ -266,6 +266,31 @@ func (s *UserService) ResetPassword(email, code, newPassword string) error {
 	return s.userRepo.Update(u)
 }
 
+// ChangePassword 修改密码（已登录用户）。
+// 校验旧密码 → bcrypt 新密码 → 更新。
+func (s *UserService) ChangePassword(email string, req user.ChangePasswordRequest) error {
+	email = normalizeEmail(email)
+
+	u, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return user.ErrUserNotFound
+	}
+
+	// 校验旧密码
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.OldPassword)); err != nil {
+		return user.ErrWrongOldPassword
+	}
+
+	// bcrypt 加密新密码
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	u.PasswordHash = string(hash)
+	return s.userRepo.Update(u)
+}
+
 // GetMe 获取当前用户信息。
 func (s *UserService) GetMe(email string) (*user.UserResponse, error) {
 	email = normalizeEmail(email)

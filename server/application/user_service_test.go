@@ -498,6 +498,96 @@ func TestUserService_Login(t *testing.T) {
 }
 
 // =============================================================================
+// ChangePassword
+// =============================================================================
+
+func TestUserService_ChangePassword(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "alice@std.uestc.edu.cn", "oldpassword", "Alice", "S001")
+
+		// 修改密码
+		err := svc.ChangePassword("alice@std.uestc.edu.cn", user.ChangePasswordRequest{
+			OldPassword: "oldpassword",
+			NewPassword: "newpassword",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// 用旧密码登录应失败
+		_, err = svc.Login(user.LoginRequest{
+			Email:    "alice@std.uestc.edu.cn",
+			Password: "oldpassword",
+		})
+		if err != user.ErrWrongPassword {
+			t.Errorf("expected ErrWrongPassword for old password, got %v", err)
+		}
+
+		// 用新密码登录应成功
+		authResp, err := svc.Login(user.LoginRequest{
+			Email:    "alice@std.uestc.edu.cn",
+			Password: "newpassword",
+		})
+		if err != nil {
+			t.Fatalf("unexpected login error with new password: %v", err)
+		}
+		if authResp.Token == "" {
+			t.Error("JWT token should not be empty")
+		}
+	})
+
+	t.Run("wrong old password", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "bob@std.uestc.edu.cn", "correctpassword", "Bob", "S002")
+
+		err := svc.ChangePassword("bob@std.uestc.edu.cn", user.ChangePasswordRequest{
+			OldPassword: "wrongpassword",
+			NewPassword: "newpassword",
+		})
+		if err != user.ErrWrongOldPassword {
+			t.Errorf("expected ErrWrongOldPassword, got %v", err)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		err := svc.ChangePassword("nobody@std.uestc.edu.cn", user.ChangePasswordRequest{
+			OldPassword: "old",
+			NewPassword: "new",
+		})
+		if err != user.ErrUserNotFound {
+			t.Errorf("expected ErrUserNotFound, got %v", err)
+		}
+	})
+
+	t.Run("normalizes email", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "case@std.uestc.edu.cn", "oldpassword", "Case", "C001")
+
+		err := svc.ChangePassword(" CASE@STD.UESTC.EDU.CN ", user.ChangePasswordRequest{
+			OldPassword: "oldpassword",
+			NewPassword: "newpassword",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
+// =============================================================================
 // GetMe
 // =============================================================================
 

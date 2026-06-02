@@ -73,6 +73,7 @@ func setupRouter() *gin.Engine {
 			authRequired.Use(middleware.JWTAuth())
 			{
 				authRequired.GET("/me", userH.Me)
+				authRequired.PUT("/change-password", userH.ChangePassword)
 			}
 		}
 
@@ -432,5 +433,82 @@ func TestHandler_Unauthorized(t *testing.T) {
 	w = doJSON("POST", "/api/v1/appointments", `{"time_slot_id":"xxx","message":"hi"}`)
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("appointment without token: expected 401, got %d", w.Code)
+	}
+}
+
+// =============================================================================
+// 修改密码
+// =============================================================================
+
+func TestHandler_ChangePassword_FullFlow(t *testing.T) {
+	token := registerHelper(t, "chpwd3@std.uestc.edu.cn", "oldpass123", "ChPwd", "CP001")
+
+	// 1. 旧密码错误 → 400
+	w := doJSONWithToken("PUT", "/api/v1/auth/change-password",
+		`{"old_password":"wrongpassword","new_password":"newpass123"}`, token)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("wrong old password: expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 2. 修改密码成功 → 200
+	w = doJSONWithToken("PUT", "/api/v1/auth/change-password",
+		`{"old_password":"oldpass123","new_password":"newpass123"}`, token)
+	if w.Code != http.StatusOK {
+		t.Fatalf("change password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	resp := parseJSON(w)
+	if resp["message"] != "密码修改成功" {
+		t.Errorf("message = %v, want 密码修改成功", resp["message"])
+	}
+
+	// 3. 旧密码登录应失败 → 401
+	w = doJSON("POST", "/api/v1/auth/login",
+		`{"email":"chpwd3@std.uestc.edu.cn","password":"oldpass123"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("login with old password: expected 401, got %d", w.Code)
+	}
+
+	// 4. 新密码登录应成功 → 200
+	w = doJSON("POST", "/api/v1/auth/login",
+		`{"email":"chpwd3@std.uestc.edu.cn","password":"newpass123"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("login with new password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	loginResp := parseJSON(w)
+	if _, ok := loginResp["token"].(string); !ok {
+		t.Error("login response should include token")
+	}
+}
+
+func TestHandler_ChangePassword_NoToken(t *testing.T) {
+	w := doJSON("PUT", "/api/v1/auth/change-password",
+		`{"old_password":"old","new_password":"new"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("change password without token: expected 401, got %d", w.Code)
+	}
+}
+
+func TestHandler_ChangePassword_Validation(t *testing.T) {
+	token := registerHelper(t, "chpwdv3@std.uestc.edu.cn", "pass123456", "ChPwdV", "CV001")
+
+	// 新密码太短
+	w := doJSONWithToken("PUT", "/api/v1/auth/change-password",
+		`{"old_password":"pass123456","new_password":"12345"}`, token)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("short password: expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 缺少 old_password
+	w = doJSONWithToken("PUT", "/api/v1/auth/change-password",
+		`{"new_password":"newpass123"}`, token)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("missing old_password: expected 400, got %d", w.Code)
+	}
+
+	// 缺少 new_password
+	w = doJSONWithToken("PUT", "/api/v1/auth/change-password",
+		`{"old_password":"pass123456"}`, token)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("missing new_password: expected 400, got %d", w.Code)
 	}
 }

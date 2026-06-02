@@ -152,3 +152,9 @@ type ResetPasswordRequest struct {
 	Code     string `json:"code" binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 }
+
+// ChangePasswordRequest 修改密码（已登录用户）
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}

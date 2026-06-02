@@ -41,6 +41,7 @@ func RegisterRoutes(
 			authRequired.Use(middleware.JWTAuth())
 			{
 				authRequired.GET("/me", userH.Me)
+				authRequired.PUT("/change-password", userH.ChangePassword)
 			}
 		}
 

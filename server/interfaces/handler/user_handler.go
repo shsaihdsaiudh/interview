@@ -184,6 +184,31 @@ func (h *UserHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// ChangePassword 修改密码（已登录）。
+func (h *UserHandler) ChangePassword(c *gin.Context) {
+	email := c.GetString("user_email")
+
+	var req user.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数不合法: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.ChangePassword(email, req); err != nil {
+		switch {
+		case errors.Is(err, user.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		case errors.Is(err, user.ErrWrongOldPassword):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "修改密码失败，请稍后重试"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
+}
+
 // =============================================================================
 // 用户资料
 // =============================================================================
