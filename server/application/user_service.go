@@ -26,7 +26,8 @@ import (
 type UserService struct {
 	userRepo          user.UserRepository
 	apptRepo          appointment.AppointmentRepository
-	verificationCodes map[string]verificationCode // email → code（开发阶段内存存储）
+	verificationCodes map[string]verificationCode // email → code（注册验证，开发阶段内存存储）
+	resetCodes        map[string]verificationCode // email → code（密码重置，开发阶段内存存储）
 	mu                sync.Mutex
 	mailSender        mail.Sender // nil 时降级为日志模式
 }
@@ -44,6 +45,7 @@ func NewUserService(userRepo user.UserRepository, apptRepo appointment.Appointme
 		userRepo:          userRepo,
 		apptRepo:          apptRepo,
 		verificationCodes: make(map[string]verificationCode),
+		resetCodes:        make(map[string]verificationCode),
 		mailSender:        mailSender,
 	}
 }
@@ -193,6 +195,75 @@ func (s *UserService) Login(req user.LoginRequest) (*user.AuthResponse, error) {
 		Token: jwtToken,
 		User:  u.ToResponse(),
 	}, nil
+}
+
+// ForgotPassword 忘记密码 — 向已注册邮箱发送重置验证码。
+func (s *UserService) ForgotPassword(email string) error {
+	email = normalizeEmail(email)
+
+	// 邮箱必须已注册
+	if _, err := s.userRepo.FindByEmail(email); err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			return user.ErrUserNotFound
+		}
+		return err
+	}
+
+	code, err := generateVerificationCode()
+	if err != nil {
+		return fmt.Errorf("生成验证码失败: %w", err)
+	}
+
+	s.mu.Lock()
+	s.resetCodes[email] = verificationCode{
+		Code:      code,
+		ExpiresAt: time.Now().Add(verificationCodeTTL),
+	}
+	s.mu.Unlock()
+
+	// 优先通过 SMTP 发送，失败或未配置时降级为日志
+	if s.mailSender != nil {
+		if err := s.mailSender.SendResetCode(email, code); err != nil {
+			log.Printf("⚠️ 邮件发送失败: %v，降级为日志模式", err)
+			log.Printf("📧 [DEV] 重置验证码：%s → %s", email, code)
+		}
+		return nil
+	}
+
+	log.Printf("📧 [DEV] 重置验证码已发送到 %s: %s", email, code)
+	return nil
+}
+
+// ResetPassword 重置密码 — 校验验证码后更新密码。
+func (s *UserService) ResetPassword(email, code, newPassword string) error {
+	email = normalizeEmail(email)
+
+	u, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return user.ErrUserNotFound
+	}
+
+	// 校验重置验证码
+	s.mu.Lock()
+	storedCode, ok := s.resetCodes[email]
+	if !ok || storedCode.Code != code || time.Now().After(storedCode.ExpiresAt) {
+		if ok && time.Now().After(storedCode.ExpiresAt) {
+			delete(s.resetCodes, email)
+		}
+		s.mu.Unlock()
+		return user.ErrInvalidCode
+	}
+	delete(s.resetCodes, email) // 一次性使用
+	s.mu.Unlock()
+
+	// bcrypt 加密新密码
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
+	u.PasswordHash = string(hash)
+	return s.userRepo.Update(u)
 }
 
 // GetMe 获取当前用户信息。

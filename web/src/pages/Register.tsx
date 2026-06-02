@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiPost, getApiErrorMessage, setToken } from '../api/client';
-import { setUser, notifyAuthChange } from '../components/Navbar';
+import { setUser, notifyAuthChange, getUser } from '../components/Navbar';
 
 interface RegisterResponse {
   token: string;
@@ -17,6 +17,8 @@ const EMAIL_SUFFIX = '@std.uestc.edu.cn';
 
 function Register() {
   const navigate = useNavigate();
+  const currentUser = getUser();
+
   const [studentId, setStudentId] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
@@ -25,6 +27,12 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
+
+  // 已登录用户跳转首页
+  if (currentUser) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const fullEmail = studentId + EMAIL_SUFFIX;
 

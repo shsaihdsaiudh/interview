@@ -16,6 +16,7 @@ import (
 // Sender 邮件发送接口 — 便于测试 mock。
 type Sender interface {
 	SendVerificationCode(to, code string) error
+	SendResetCode(to, code string) error
 }
 
 // SMTPSender 通过 SMTP SSL (端口 465) 发送邮件。
@@ -64,11 +65,10 @@ func NewSMTPSenderFromEnv() Sender {
 	return sender
 }
 
-// SendVerificationCode 发送验证码邮件。
-func (s *SMTPSender) SendVerificationCode(to, code string) error {
+// sendMail 发送一封邮件（TLS + SMTP 公共逻辑）。
+func (s *SMTPSender) sendMail(to, subject, htmlBody string) error {
 	addr := net.JoinHostPort(s.host, s.port)
 
-	// 端口 465 使用隐式 TLS（先 TLS 握手，再 SMTP）
 	tlsConfig := &tls.Config{
 		ServerName: s.tlsServerName,
 		MinVersion: tls.VersionTLS12,
@@ -102,7 +102,16 @@ func (s *SMTPSender) SendVerificationCode(to, code string) error {
 		return fmt.Errorf("DATA 失败: %w", err)
 	}
 
-	msg := buildVerificationEmail(s.from, to, code)
+	msg := fmt.Sprintf(
+		"From: %s <%s>\r\n"+
+			"To: %s\r\n"+
+			"Subject: %s\r\n"+
+			"MIME-Version: 1.0\r\n"+
+			"Content-Type: text/html; charset=UTF-8\r\n"+
+			"\r\n"+
+			"%s",
+		rfc2047B("面试互助平台"), s.from, to, rfc2047B(subject), htmlBody,
+	)
 	if _, err := w.Write([]byte(msg)); err != nil {
 		return fmt.Errorf("写入邮件内容失败: %w", err)
 	}
@@ -110,8 +119,18 @@ func (s *SMTPSender) SendVerificationCode(to, code string) error {
 		return fmt.Errorf("关闭邮件数据失败: %w", err)
 	}
 
-	log.Printf("📧 验证码已发送到 %s", to)
+	log.Printf("📧 邮件已发送到 %s", to)
 	return nil
+}
+
+// SendVerificationCode 发送注册验证码邮件。
+func (s *SMTPSender) SendVerificationCode(to, code string) error {
+	return s.sendMail(to, "邮箱验证码", buildVerificationHTML(code))
+}
+
+// SendResetCode 发送密码重置验证码邮件。
+func (s *SMTPSender) SendResetCode(to, code string) error {
+	return s.sendMail(to, "重置密码验证码", buildResetPasswordHTML(code))
 }
 
 // rfc2047B 对 UTF-8 字符串做 RFC 2047 B 编码（Base64）。
@@ -120,34 +139,60 @@ func rfc2047B(s string) string {
 	return "=?UTF-8?B?" + base64.StdEncoding.EncodeToString([]byte(s)) + "?="
 }
 
-// buildVerificationEmail 构建验证码邮件内容。
-func buildVerificationEmail(from, to, code string) string {
-	return fmt.Sprintf(
-		"From: %s <%s>\r\n"+
-			"To: %s\r\n"+
-			"Subject: %s\r\n"+
-			"MIME-Version: 1.0\r\n"+
-			"Content-Type: text/html; charset=UTF-8\r\n"+
-			"\r\n"+
-			`<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <div style="text-align:center;margin-bottom:24px;">
-    <div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#6366f1;color:#fff;font-size:24px;line-height:48px;">🎯</div>
+// emailWrapper 邮件外层布局（素净极简风格）。
+const emailWrapper = `
+<div style="max-width:420px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB',sans-serif;padding:48px 24px;">
+  <div style="text-align:center;margin-bottom:40px;">
+    <div style="font-size:13px;font-weight:500;color:#1a1a1a;letter-spacing:0.3px;">面试互助平台</div>
   </div>
-  <h2 style="text-align:center;color:#1e293b;margin:0 0 8px;">邮箱验证码</h2>
-  <p style="text-align:center;color:#64748b;font-size:14px;margin:0 0 24px;">你正在注册面试互助平台，请在注册页面输入以下验证码</p>
-  <div style="background:#f8fafc;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-    <div style="font-size:36px;font-weight:700;letter-spacing:8px;color:#6366f1;font-family:'SF Mono',Menlo,monospace;">%s</div>
+  %s
+  <div style="border-top:1px solid #eee;margin-top:40px;padding-top:20px;">
+    <p style="font-size:11px;color:#bbb;text-align:center;line-height:1.8;margin:0;">
+      电子科技大学 · 面试互助平台<br>此邮件由系统自动发送，请勿回复
+    </p>
   </div>
-  <p style="text-align:center;color:#94a3b8;font-size:12px;margin:0;">验证码 5 分钟内有效，请勿转发给他人</p>
-  <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-  <p style="text-align:center;color:#cbd5e1;font-size:11px;margin:0;">面试互助平台 · 电子科技大学</p>
-</div>`,
-		rfc2047B("面试互助平台"),
-		from,
-		to,
-		rfc2047B("邮箱验证码"),
-		code,
-	)
+</div>`
+
+// buildVerificationHTML 构建注册验证码邮件 HTML。
+func buildVerificationHTML(code string) string {
+	body := fmt.Sprintf(`
+  <h1 style="font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 8px;text-align:center;letter-spacing:-0.3px;">验证你的邮箱</h1>
+  <p style="font-size:14px;color:#888;line-height:1.8;margin:0 0 36px;text-align:center;">请输入以下验证码来完成注册。</p>
+
+  <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:36px;">
+    <tr>
+      <td align="center" style="padding:28px 0;border:1px solid #eaeaea;border-radius:6px;">
+        <span style="font-size:32px;font-weight:500;letter-spacing:14px;color:#1a1a1a;font-family:'SF Mono','SFMono-Regular',Menlo,monospace;padding-left:14px;">%s</span>
+      </td>
+    </tr>
+  </table>
+
+  <p style="font-size:12px;color:#aaa;text-align:center;line-height:1.8;margin:0;">
+    验证码 5 分钟内有效<br>如果不是你本人操作，请忽略此邮件
+  </p>`, code)
+
+	return fmt.Sprintf(emailWrapper, body)
+}
+
+// buildResetPasswordHTML 构建密码重置验证码邮件 HTML。
+func buildResetPasswordHTML(code string) string {
+	body := fmt.Sprintf(`
+  <h1 style="font-size:22px;font-weight:600;color:#1a1a1a;margin:0 0 8px;text-align:center;letter-spacing:-0.3px;">重置登录密码</h1>
+  <p style="font-size:14px;color:#888;line-height:1.8;margin:0 0 36px;text-align:center;">你发起了密码重置请求，请输入以下验证码来设置新密码。</p>
+
+  <table width="100%%" cellpadding="0" cellspacing="0" style="margin-bottom:36px;">
+    <tr>
+      <td align="center" style="padding:28px 0;border:1px solid #eaeaea;border-radius:6px;">
+        <span style="font-size:32px;font-weight:500;letter-spacing:14px;color:#1a1a1a;font-family:'SF Mono','SFMono-Regular',Menlo,monospace;padding-left:14px;">%s</span>
+      </td>
+    </tr>
+  </table>
+
+  <p style="font-size:12px;color:#aaa;text-align:center;line-height:1.8;margin:0;">
+    验证码 5 分钟内有效<br>如果你没有发起此操作，请忽略此邮件，你的账号是安全的
+  </p>`, code)
+
+	return fmt.Sprintf(emailWrapper, body)
 }
 
 func envOrDefault(key, fallback string) string {

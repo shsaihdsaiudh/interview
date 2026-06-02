@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiPost, getApiErrorMessage, setToken } from '../api/client';
-import { setUser, notifyAuthChange } from '../components/Navbar';
+import { setUser, notifyAuthChange, getUser } from '../components/Navbar';
 
 interface LoginResponse {
   token: string;
@@ -19,10 +19,18 @@ const EMAIL_SUFFIX = '@std.uestc.edu.cn';
 
 function Login() {
   const navigate = useNavigate();
+  const currentUser = getUser();
+
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 已登录用户跳转首页
+  if (currentUser) {
+    navigate('/', { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,10 +95,16 @@ function Login() {
               />
             </label>
 
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-xs text-text-muted hover:text-brand-600 transition no-underline">
+                忘记密码？
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm
+              className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm
                          transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-none"
             >
               {loading ? '登录中...' : '登录'}

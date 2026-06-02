@@ -34,6 +34,8 @@ func RegisterRoutes(
 			auth.POST("/register", userH.Register)
 			auth.GET("/verify-email", userH.VerifyEmail)
 			auth.POST("/login", userH.Login)
+			auth.POST("/forgot-password", userH.ForgotPassword)
+			auth.POST("/reset-password", userH.ResetPassword)
 
 			authRequired := auth.Group("")
 			authRequired.Use(middleware.JWTAuth())

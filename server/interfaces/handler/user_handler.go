@@ -122,6 +122,51 @@ func (h *UserHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// ForgotPassword 忘记密码 — 发送重置验证码。
+func (h *UserHandler) ForgotPassword(c *gin.Context) {
+	var req user.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数不合法: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.ForgotPassword(req.Email); err != nil {
+		switch {
+		case errors.Is(err, user.ErrUserNotFound):
+			// 为安全起见不暴露用户是否存在，统一返回成功
+			c.JSON(http.StatusOK, gin.H{"message": "如果该邮箱已注册，验证码已发送"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "发送验证码失败"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "重置验证码已发送（开发阶段请看服务端日志）"})
+}
+
+// ResetPassword 重置密码。
+func (h *UserHandler) ResetPassword(c *gin.Context) {
+	var req user.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数不合法: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.ResetPassword(req.Email, req.Code, req.Password); err != nil {
+		switch {
+		case errors.Is(err, user.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		case errors.Is(err, user.ErrInvalidCode):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "重置密码失败，请稍后重试"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "密码重置成功，请登录"})
+}
+
 // Me 获取当前登录用户信息。
 func (h *UserHandler) Me(c *gin.Context) {
 	email, exists := c.Get("user_email")

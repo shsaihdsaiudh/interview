@@ -138,3 +138,17 @@ type UpdateProfileRequest struct {
 	Avatar      string   `json:"avatar"`
 	ContactInfo string   `json:"contact_info"`
 }
+
+// ── 忘记密码相关 DTO ──
+
+// ForgotPasswordRequest 忘记密码 — 发送重置验证码
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ResetPasswordRequest 重置密码
+type ResetPasswordRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Code     string `json:"code" binding:"required"`
+	Password string `json:"password" binding:"required,min=6"`
+}
