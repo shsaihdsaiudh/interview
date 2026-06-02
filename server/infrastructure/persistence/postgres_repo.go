@@ -144,6 +144,29 @@ func (r *PostgresRepo) FindAll() []*user.User {
 	return users
 }
 
+// Delete 删除用户及其关联数据。
+// 先删除用户的预约记录（含 mentor_id / student_id 外键），再删除用户本身；
+// 空闲时间通过 ON DELETE CASCADE 自动级联删除。
+func (r *PostgresRepo) Delete(email string) error {
+	// 删除该用户作为 mentor 或 student 的所有预约
+	_, err := r.pool.Exec(context.Background(),
+		`DELETE FROM appointments WHERE mentor_id = $1 OR student_id = $1`, email)
+	if err != nil {
+		return err
+	}
+
+	// 删除用户（availabilities 通过 ON DELETE CASCADE 自动删除）
+	tag, err := r.pool.Exec(context.Background(),
+		`DELETE FROM users WHERE email = $1`, email)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return user.ErrUserNotFound
+	}
+	return nil
+}
+
 // =============================================================================
 // appointment.AppointmentRepository 接口实现
 // =============================================================================

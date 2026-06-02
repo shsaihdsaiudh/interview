@@ -21,6 +21,7 @@ type mockUserRepo struct {
 	findByEmailErr error
 	findByTokenErr error
 	updateErr      error
+	deleteErr      error
 }
 
 func newMockUserRepo() *mockUserRepo {
@@ -85,6 +86,17 @@ func (m *mockUserRepo) FindAll() []*user.User {
 		}
 	}
 	return result
+}
+
+func (m *mockUserRepo) Delete(email string) error {
+	if m.deleteErr != nil {
+		return m.deleteErr
+	}
+	if _, ok := m.usersByEmail[email]; !ok {
+		return user.ErrUserNotFound
+	}
+	delete(m.usersByEmail, email)
+	return nil
 }
 
 // mockApptRepo 实现 appointment.AppointmentRepository，用于单元测试。
@@ -822,6 +834,127 @@ func TestUserService_hasAcceptedAppointment(t *testing.T) {
 		}
 		if !svc.hasAcceptedAppointment("mentor@std.uestc.edu.cn", "student2@std.uestc.edu.cn") {
 			t.Error("should be true when mentor has accepted student")
+		}
+	})
+}
+
+// =============================================================================
+// DeleteAccount
+// =============================================================================
+
+func TestUserService_DeleteAccount(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "alice@std.uestc.edu.cn", "password123", "Alice", "S001")
+
+		err := svc.DeleteAccount("alice@std.uestc.edu.cn", "password123")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// 注销后用户不应存在
+		_, err = ur.FindByEmail("alice@std.uestc.edu.cn")
+		if err != user.ErrUserNotFound {
+			t.Errorf("expected ErrUserNotFound after delete, got %v", err)
+		}
+	})
+
+	t.Run("wrong password", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "bob@std.uestc.edu.cn", "password123", "Bob", "S002")
+
+		err := svc.DeleteAccount("bob@std.uestc.edu.cn", "wrongpassword")
+		if err != user.ErrWrongPassword {
+			t.Errorf("expected ErrWrongPassword, got %v", err)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		err := svc.DeleteAccount("nobody@std.uestc.edu.cn", "password")
+		if err != user.ErrUserNotFound {
+			t.Errorf("expected ErrUserNotFound, got %v", err)
+		}
+	})
+
+	t.Run("normalizes email", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "case@std.uestc.edu.cn", "password123", "Case", "C001")
+
+		err := svc.DeleteAccount(" CASE@STD.UESTC.EDU.CN ", "password123")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("has active appointment", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "mentor@std.uestc.edu.cn", "password123", "Mentor", "M001")
+
+		// 创建 pending 预约
+		ar.appointments["appt-1"] = &appointment.Appointment{
+			MentorID:  "mentor@std.uestc.edu.cn",
+			StudentID: "student@std.uestc.edu.cn",
+			Status:    appointment.StatusPending,
+		}
+
+		err := svc.DeleteAccount("mentor@std.uestc.edu.cn", "password123")
+		if err != user.ErrCannotDeleteWithActiveAppointments {
+			t.Errorf("expected ErrCannotDeleteWithActiveAppointments, got %v", err)
+		}
+	})
+
+	t.Run("has accepted appointment", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "mentor2@std.uestc.edu.cn", "password123", "Mentor2", "M002")
+
+		ar.appointments["appt-2"] = &appointment.Appointment{
+			MentorID:  "mentor2@std.uestc.edu.cn",
+			StudentID: "student2@std.uestc.edu.cn",
+			Status:    appointment.StatusAccepted,
+		}
+
+		err := svc.DeleteAccount("mentor2@std.uestc.edu.cn", "password123")
+		if err != user.ErrCannotDeleteWithActiveAppointments {
+			t.Errorf("expected ErrCannotDeleteWithActiveAppointments, got %v", err)
+		}
+	})
+
+	t.Run("only rejected appointments allows delete", func(t *testing.T) {
+		ur := newMockUserRepo()
+		ar := newMockApptRepo()
+		svc := newTestUserService(ur, ar)
+
+		registerHelper(svc, "mentor3@std.uestc.edu.cn", "password123", "Mentor3", "M003")
+
+		// 创建 rejected 预约
+		ar.appointments["appt-3"] = &appointment.Appointment{
+			MentorID:  "mentor3@std.uestc.edu.cn",
+			StudentID: "student3@std.uestc.edu.cn",
+			Status:    appointment.StatusRejected,
+		}
+
+		err := svc.DeleteAccount("mentor3@std.uestc.edu.cn", "password123")
+		if err != nil {
+			t.Errorf("expected no error for rejected-only appointments, got %v", err)
 		}
 	})
 }

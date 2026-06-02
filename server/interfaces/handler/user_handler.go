@@ -210,6 +210,39 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 }
 
 // =============================================================================
+// 账号管理
+// =============================================================================
+
+// DeleteAccount 注销账号。需提供密码确认身份。
+func (h *UserHandler) DeleteAccount(c *gin.Context) {
+	email := c.GetString("user_email")
+
+	var req struct {
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数不合法: " + err.Error()})
+		return
+	}
+
+	if err := h.userSvc.DeleteAccount(email, req.Password); err != nil {
+		switch {
+		case errors.Is(err, user.ErrUserNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "用户不存在"})
+		case errors.Is(err, user.ErrWrongPassword):
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "密码错误"})
+		case errors.Is(err, user.ErrCannotDeleteWithActiveAppointments):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "注销失败，请稍后重试"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "账号已注销"})
+}
+
+// =============================================================================
 // 用户资料
 // =============================================================================
 

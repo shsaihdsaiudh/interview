@@ -74,6 +74,7 @@ func setupRouter() *gin.Engine {
 			{
 				authRequired.GET("/me", userH.Me)
 				authRequired.PUT("/change-password", userH.ChangePassword)
+				authRequired.DELETE("/account", userH.DeleteAccount)
 			}
 		}
 
@@ -510,5 +511,91 @@ func TestHandler_ChangePassword_Validation(t *testing.T) {
 		`{"old_password":"pass123456"}`, token)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("missing new_password: expected 400, got %d", w.Code)
+	}
+}
+
+// =============================================================================
+// 注销账号
+// =============================================================================
+
+func TestHandler_DeleteAccount_Success(t *testing.T) {
+	token := registerHelper(t, "del-ok@std.uestc.edu.cn", "pass123", "DelOK", "D001")
+
+	w := doJSONWithToken("DELETE", "/api/v1/auth/account",
+		`{"password":"pass123"}`, token)
+	if w.Code != http.StatusOK {
+		t.Fatalf("delete account: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	resp := parseJSON(w)
+	if resp["message"] != "账号已注销" {
+		t.Errorf("message = %v, want 账号已注销", resp["message"])
+	}
+
+	// 注销后无法登录
+	w = doJSON("POST", "/api/v1/auth/login",
+		`{"email":"del-ok@std.uestc.edu.cn","password":"pass123"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("login after delete: expected 401, got %d", w.Code)
+	}
+}
+
+func TestHandler_DeleteAccount_WrongPassword(t *testing.T) {
+	token := registerHelper(t, "del-wp@std.uestc.edu.cn", "pass123", "DelWP", "D002")
+
+	w := doJSONWithToken("DELETE", "/api/v1/auth/account",
+		`{"password":"wrongpass"}`, token)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("wrong password: expected 401, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_DeleteAccount_NoToken(t *testing.T) {
+	w := doJSON("DELETE", "/api/v1/auth/account", `{"password":"pass123"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("no token: expected 401, got %d", w.Code)
+	}
+}
+
+func TestHandler_DeleteAccount_NoPassword(t *testing.T) {
+	token := registerHelper(t, "del-np@std.uestc.edu.cn", "pass123", "DelNP", "D003")
+
+	w := doJSONWithToken("DELETE", "/api/v1/auth/account", `{}`, token)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("no password: expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandler_DeleteAccount_WithActiveAppointment(t *testing.T) {
+	mentorToken := registerHelper(t, "del-mentor@std.uestc.edu.cn", "pass123", "DelMentor", "DM001")
+	studentToken := registerHelper(t, "del-student@std.uestc.edu.cn", "pass123", "DelStudent", "DS001")
+
+	// 创建空闲时间
+	w := doJSONWithToken("POST", "/api/v1/availability",
+		`{"date":"2099-12-31","start_time":"10:00","end_time":"11:00"}`, mentorToken)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("add availability: %d: %s", w.Code, w.Body.String())
+	}
+	resp := parseJSON(w)
+	slotID, _ := resp["id"].(string)
+
+	// 创建预约
+	w = doJSONWithToken("POST", "/api/v1/appointments",
+		`{"time_slot_id":"`+slotID+`","message":"test"}`, studentToken)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create appointment: %d: %s", w.Code, w.Body.String())
+	}
+
+	// mentor 有活跃预约，无法注销
+	w = doJSONWithToken("DELETE", "/api/v1/auth/account",
+		`{"password":"pass123"}`, mentorToken)
+	if w.Code != http.StatusConflict {
+		t.Errorf("mentor with active appointment: expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// student 有活跃预约，无法注销
+	w = doJSONWithToken("DELETE", "/api/v1/auth/account",
+		`{"password":"pass123"}`, studentToken)
+	if w.Code != http.StatusConflict {
+		t.Errorf("student with active appointment: expected 409, got %d: %s", w.Code, w.Body.String())
 	}
 }

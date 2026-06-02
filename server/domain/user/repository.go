@@ -17,4 +17,8 @@ type UserRepository interface {
 
 	// FindAll 返回所有已验证邮箱的用户。
 	FindAll() []*User
+
+	// Delete 删除用户及其关联的空闲时间和预约。
+	// 如果用户不存在，返回 ErrUserNotFound。
+	Delete(email string) error
 }

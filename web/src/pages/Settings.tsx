@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { apiGet, apiPut, getApiErrorMessage } from '../api/client';
-import { getUser, setUser, notifyAuthChange } from '../components/Navbar';
+import { useNavigate } from 'react-router-dom';
+import { apiGet, apiPut, apiDelete, getApiErrorMessage, removeToken } from '../api/client';
+import { getUser, setUser, notifyAuthChange, clearUser } from '../components/Navbar';
 
 interface ProfileData {
   user: {
@@ -17,6 +18,8 @@ interface ProfileData {
 }
 
 function Settings() {
+  const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
@@ -36,6 +39,13 @@ function Settings() {
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pwdMsg, setPwdMsg] = useState('');
   const [pwdMsgType, setPwdMsgType] = useState<'success' | 'error'>('success');
+
+  // ── 注销账号 ──
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [deleteMsg, setDeleteMsg] = useState('');
+  const [deleteMsgType, setDeleteMsgType] = useState<'success' | 'error'>('error');
 
   useEffect(() => {
     apiGet<ProfileData>('/profile')
@@ -108,6 +118,37 @@ function Settings() {
     }
   };
 
+  const showDeleteMsg = (text: string, type: 'success' | 'error' = 'error') => {
+    setDeleteMsg(text);
+    setDeleteMsgType(type);
+    setTimeout(() => setDeleteMsg(''), 5000);
+  };
+
+  const handleDeleteInitiate = () => {
+    if (!deletePassword) {
+      showDeleteMsg('请输入密码确认身份', 'error');
+      return;
+    }
+    setDeleteConfirm(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteSaving(true);
+    setDeleteMsg('');
+    try {
+      await apiDelete(`/auth/account`, { password: deletePassword });
+      removeToken();
+      clearUser();
+      notifyAuthChange();
+      navigate('/', { replace: true });
+    } catch (err: unknown) {
+      showDeleteMsg(getApiErrorMessage(err, '注销失败'));
+      setDeleteConfirm(false);
+    } finally {
+      setDeleteSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-10">
@@ -177,7 +218,7 @@ function Settings() {
       </div>
 
       {/* ── 修改密码 ── */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
+      <div className="bg-card rounded-2xl border border-border shadow-sm p-8 mb-6">
         <h2 className="text-lg font-bold text-text mb-5">修改密码</h2>
 
         {pwdMsg && (
@@ -211,6 +252,65 @@ function Settings() {
             {pwdSaving ? '修改中...' : '修改密码'}
           </button>
         </form>
+      </div>
+
+      {/* ── 危险操作区：注销账号 ── */}
+      <div className="bg-card rounded-2xl border border-danger/30 shadow-sm p-8">
+        <h2 className="text-lg font-bold text-danger mb-1">注销账号</h2>
+        <p className="text-sm text-text-secondary mb-5">此操作不可撤销，所有数据将被永久删除。</p>
+
+        {deleteMsg && (
+          <div
+            className={`px-4 py-2.5 rounded-xl text-sm mb-4 border ${
+              deleteMsgType === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-600'
+            }`}
+          >
+            {deleteMsg}
+          </div>
+        )}
+
+        {!deleteConfirm ? (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <input
+              type="password"
+              className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt w-full sm:w-64"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="输入密码确认身份"
+              disabled={deleteSaving}
+            />
+            <button
+              onClick={handleDeleteInitiate}
+              disabled={deleteSaving}
+              className="px-5 py-2 rounded-lg bg-danger hover:bg-red-700 text-white text-sm font-medium transition cursor-pointer border-none disabled:opacity-50 whitespace-nowrap"
+            >
+              {deleteSaving ? '处理中...' : '注销账号'}
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-danger/20 bg-red-50 p-5">
+            <p className="text-sm text-red-700 font-medium mb-1">⚠️ 确认注销账号？</p>
+            <p className="text-sm text-red-600 mb-4">此操作不可撤销，你的个人资料、空闲时间和预约记录将被永久删除。</p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteSaving}
+                className="px-5 py-2 rounded-lg bg-danger hover:bg-red-700 text-white text-sm font-medium transition cursor-pointer border-none disabled:opacity-50"
+              >
+                {deleteSaving ? '注销中...' : '确认注销'}
+              </button>
+              <button
+                onClick={() => { setDeleteConfirm(false); setDeletePassword(''); }}
+                disabled={deleteSaving}
+                className="px-5 py-2 rounded-lg border border-border text-text-secondary hover:text-text text-sm font-medium transition cursor-pointer bg-transparent disabled:opacity-50"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

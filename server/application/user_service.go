@@ -291,6 +291,46 @@ func (s *UserService) ChangePassword(email string, req user.ChangePasswordReques
 	return s.userRepo.Update(u)
 }
 
+// DeleteAccount 注销账号。
+// 校验密码确认身份 → 检查活跃预约 → 删除账号及关联数据。
+func (s *UserService) DeleteAccount(email, password string) error {
+	email = normalizeEmail(email)
+
+	u, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return user.ErrUserNotFound
+	}
+
+	// 校验密码确认身份
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return user.ErrWrongPassword
+	}
+
+	// 检查是否有活跃预约（pending 或 accepted）
+	if s.hasActiveAppointment(email) {
+		return user.ErrCannotDeleteWithActiveAppointments
+	}
+
+	return s.userRepo.Delete(email)
+}
+
+// hasActiveAppointment 检查用户是否有未完成的预约。
+func (s *UserService) hasActiveAppointment(email string) bool {
+	apps := s.apptRepo.FindAppointmentsByStudentID(email)
+	for _, a := range apps {
+		if a.Status != appointment.StatusRejected {
+			return true
+		}
+	}
+	apps = s.apptRepo.FindAppointmentsByMentorID(email)
+	for _, a := range apps {
+		if a.Status != appointment.StatusRejected {
+			return true
+		}
+	}
+	return false
+}
+
 // GetMe 获取当前用户信息。
 func (s *UserService) GetMe(email string) (*user.UserResponse, error) {
 	email = normalizeEmail(email)
