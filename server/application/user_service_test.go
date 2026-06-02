@@ -78,14 +78,28 @@ func (m *mockUserRepo) Update(u *user.User) error {
 	return nil
 }
 
-func (m *mockUserRepo) FindAll() []*user.User {
-	var result []*user.User
+func (m *mockUserRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
+	var all []*user.User
 	for _, u := range m.usersByEmail {
 		if u.EmailVerified {
-			result = append(result, u)
+			all = append(all, u)
 		}
 	}
-	return result
+	total := len(all)
+
+	// 简单排序：按创建时间降序（保持与真实实现一致的语义）
+	// mock 中用户可能没有 CreatedAt，这里做简单切片实现即可
+
+	// 分页
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []*user.User{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
 }
 
 func (m *mockUserRepo) Delete(email string) error {
@@ -715,10 +729,70 @@ func TestUserService_GetAllUsers(t *testing.T) {
 	registerHelper(svc, "bob@std.uestc.edu.cn", "123456", "Bob", "S002")
 
 	// 都已验证，列表应有 2 个
-	users := svc.GetAllUsers()
-	if len(users) != 2 {
-		t.Errorf("expected 2 verified users, got %d", len(users))
+	resp, err := svc.GetAllUsers(1, 20)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
+	if resp.Total != 2 {
+		t.Errorf("expected total 2, got %d", resp.Total)
+	}
+	if len(resp.Users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(resp.Users))
+	}
+	if resp.Page != 1 {
+		t.Errorf("expected page 1, got %d", resp.Page)
+	}
+	if resp.PageSize != 20 {
+		t.Errorf("expected page_size 20, got %d", resp.PageSize)
+	}
+}
+
+func TestUserService_GetAllUsers_Pagination(t *testing.T) {
+	ur := newMockUserRepo()
+	ar := newMockApptRepo()
+	svc := newTestUserService(ur, ar)
+
+	// 注册 5 个用户
+	for i := 1; i <= 5; i++ {
+		email := "user" + string(rune('0'+i)) + "@std.uestc.edu.cn"
+		registerHelper(svc, email, "123456", "User"+string(rune('0'+i)), "S00"+string(rune('0'+i)))
+	}
+
+	t.Run("first page with page_size=2", func(t *testing.T) {
+		resp, err := svc.GetAllUsers(1, 2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.Total != 5 {
+			t.Errorf("expected total 5, got %d", resp.Total)
+		}
+		if len(resp.Users) != 2 {
+			t.Errorf("expected 2 users on page 1, got %d", len(resp.Users))
+		}
+	})
+
+	t.Run("last page with page_size=2", func(t *testing.T) {
+		resp, err := svc.GetAllUsers(3, 2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.Total != 5 {
+			t.Errorf("expected total 5, got %d", resp.Total)
+		}
+		if len(resp.Users) != 1 {
+			t.Errorf("expected 1 user on page 3, got %d", len(resp.Users))
+		}
+	})
+
+	t.Run("empty page beyond total", func(t *testing.T) {
+		resp, err := svc.GetAllUsers(10, 2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(resp.Users) != 0 {
+			t.Errorf("expected 0 users on page 10, got %d", len(resp.Users))
+		}
+	})
 }
 
 // =============================================================================

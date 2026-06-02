@@ -15,8 +15,9 @@ type UserRepository interface {
 	// Update 更新用户信息（所有字段全量更新）。
 	Update(user *User) error
 
-	// FindAll 返回所有已验证邮箱的用户。
-	FindAll() []*User
+	// FindAll 返回分页的用户列表，仅包含已验证邮箱的用户。
+	// page 从 1 开始；返回值 (用户列表, 总记录数, error)。
+	FindAll(page, pageSize int) ([]*User, int, error)
 
 	// Delete 删除用户及其关联的空闲时间和预约。
 	// 如果用户不存在，返回 ErrUserNotFound。

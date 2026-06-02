@@ -360,9 +360,81 @@ func TestHandler_ListUsers(t *testing.T) {
 	registerHelper(t, "list1b@std.uestc.edu.cn", "pass123", "L1", "L001")
 	registerHelper(t, "list2b@std.uestc.edu.cn", "pass123", "L2", "L002")
 
+	// 默认分页（page=1, page_size=20）
 	w := doJSON("GET", "/api/v1/users", "")
 	if w.Code != http.StatusOK {
-		t.Fatalf("list users: %d", w.Code)
+		t.Fatalf("list users: %d: %s", w.Code, w.Body.String())
+	}
+
+	resp := parseJSON(w)
+	if users, ok := resp["users"].([]interface{}); ok {
+		// 至少有我们刚注册的 2 个用户（可能还有之前测试留下的）
+		if len(users) < 2 {
+			t.Errorf("expected at least 2 users in list, got %d", len(users))
+		}
+	} else {
+		t.Error("users field missing or wrong type")
+	}
+
+	if total, ok := resp["total"].(float64); ok {
+		if int(total) < 2 {
+			t.Errorf("expected total >= 2, got %v", total)
+		}
+	} else {
+		t.Error("total field missing or wrong type")
+	}
+
+	if page, ok := resp["page"].(float64); ok {
+		if int(page) != 1 {
+			t.Errorf("expected page 1, got %v", page)
+		}
+	} else {
+		t.Error("page field missing or wrong type")
+	}
+
+	if pageSize, ok := resp["page_size"].(float64); ok {
+		if int(pageSize) != 20 {
+			t.Errorf("expected page_size 20, got %v", pageSize)
+		}
+	} else {
+		t.Error("page_size field missing or wrong type")
+	}
+}
+
+func TestHandler_ListUsers_Pagination(t *testing.T) {
+	registerHelper(t, "page1@std.uestc.edu.cn", "pass123", "P1", "P001")
+	registerHelper(t, "page2@std.uestc.edu.cn", "pass123", "P2", "P002")
+	registerHelper(t, "page3@std.uestc.edu.cn", "pass123", "P3", "P003")
+
+	// 指定分页参数
+	w := doJSON("GET", "/api/v1/users?page=1&page_size=2", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("list users with pagination: %d: %s", w.Code, w.Body.String())
+	}
+
+	resp := parseJSON(w)
+	if pageSize, ok := resp["page_size"].(float64); ok {
+		if int(pageSize) != 2 {
+			t.Errorf("expected page_size 2, got %v", pageSize)
+		}
+	}
+
+	if users, ok := resp["users"].([]interface{}); ok {
+		if len(users) > 2 {
+			t.Errorf("expected at most 2 users, got %d", len(users))
+		}
+	}
+
+	// page_size 超过最大限制 100 时应被截断
+	w = doJSON("GET", "/api/v1/users?page=1&page_size=200", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("list users with large page_size: %d: %s", w.Code, w.Body.String())
+	}
+	resp = parseJSON(w)
+	if pageSize, ok := resp["page_size"].(float64); ok {
+		if int(pageSize) != 100 {
+			t.Errorf("expected page_size capped at 100, got %v", pageSize)
+		}
 	}
 }
 

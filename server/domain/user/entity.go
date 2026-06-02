@@ -158,3 +158,11 @@ type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required,min=6"`
 }
+
+// UserListResponse 用户列表分页响应
+type UserListResponse struct {
+	Users    []UserResponse `json:"users"`
+	Total    int            `json:"total"`
+	Page     int            `json:"page"`
+	PageSize int            `json:"page_size"`
+}

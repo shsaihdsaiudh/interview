@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -369,10 +370,32 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL})
 }
 
-// ListUsers 用户列表（公开）。
+// ListUsers 用户列表（公开，支持分页）。
+// Query 参数: page（默认 1），page_size（默认 20，最大 100）
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	users := h.userSvc.GetAllUsers()
-	c.JSON(http.StatusOK, gin.H{"users": users})
+	page := 1
+	pageSize := 20
+
+	if v := c.Query("page"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if v := c.Query("page_size"); v != "" {
+		if ps, err := strconv.Atoi(v); err == nil && ps > 0 {
+			if ps > 100 {
+				ps = 100
+			}
+			pageSize = ps
+		}
+	}
+
+	resp, err := h.userSvc.GetAllUsers(page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户列表失败"})
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 // GetUser 用户详情（公开，可能含联系方式）。

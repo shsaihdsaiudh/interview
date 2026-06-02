@@ -117,15 +117,34 @@ func (r *PostgresRepo) Update(u *user.User) error {
 	return nil
 }
 
-// FindAll 返回所有已验证邮箱的用户。
-func (r *PostgresRepo) FindAll() []*user.User {
+// FindAll 返回分页的已验证邮箱用户列表。
+// page 从 1 开始。
+func (r *PostgresRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
+	// 先查询总数
+	var total int
+	err := r.pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM users WHERE email_verified = true`,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []*user.User{}, 0, nil
+	}
+
+	// 计算 offset
+	offset := (page - 1) * pageSize
+
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT email, password_hash, nickname, student_id, department,
 		        tags, avatar, contact_info, email_verified, verify_token, created_at
-		 FROM users WHERE email_verified = true ORDER BY created_at DESC`,
+		 FROM users WHERE email_verified = true
+		 ORDER BY created_at DESC
+		 LIMIT $1 OFFSET $2`, pageSize, offset,
 	)
 	if err != nil {
-		return nil
+		return nil, 0, err
 	}
 	defer rows.Close()
 
@@ -141,7 +160,7 @@ func (r *PostgresRepo) FindAll() []*user.User {
 		}
 		users = append(users, u)
 	}
-	return users
+	return users, total, nil
 }
 
 // Delete 删除用户及其关联数据。

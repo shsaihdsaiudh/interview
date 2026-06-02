@@ -383,14 +383,23 @@ func (s *UserService) UpdateProfile(email string, req user.UpdateProfileRequest)
 	return &resp, nil
 }
 
-// GetAllUsers 获取所有已验证用户列表。
-func (s *UserService) GetAllUsers() []user.UserResponse {
-	users := s.userRepo.FindAll()
+// GetAllUsers 获取用户列表（分页）。
+// page 从 1 开始，pageSize 每页条数。
+func (s *UserService) GetAllUsers(page, pageSize int) (*user.UserListResponse, error) {
+	users, total, err := s.userRepo.FindAll(page, pageSize)
+	if err != nil {
+		return nil, err
+	}
 	result := make([]user.UserResponse, 0, len(users))
 	for _, u := range users {
 		result = append(result, u.ToResponse())
 	}
-	return result
+	return &user.UserListResponse{
+		Users:    result,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+	}, nil
 }
 
 // UserDetailResponse 用户详情响应（含空闲时间）。
