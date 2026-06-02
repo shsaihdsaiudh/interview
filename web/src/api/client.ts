@@ -24,7 +24,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    // 401 时清除过期 token
+    // 401 / 404（用户不存在）时清除过期 token 和用户信息
     if (err.response?.status === 401) {
       removeToken();
       localStorage.removeItem(USER_KEY);

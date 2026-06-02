@@ -15,9 +15,11 @@ interface LoginResponse {
   };
 }
 
+const EMAIL_SUFFIX = '@std.uestc.edu.cn';
+
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,14 +28,14 @@ function Login() {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
-      setError('请填写邮箱和密码');
+    if (!studentId || !password) {
+      setError('请填写学号和密码');
       return;
     }
 
     setLoading(true);
     try {
-      const data = await apiPost<LoginResponse>('/auth/login', { email, password });
+      const data = await apiPost<LoginResponse>('/auth/login', { email: studentId + EMAIL_SUFFIX, password });
       setToken(data.token);
       setUser({ email: data.user.email, nickname: data.user.nickname });
       notifyAuthChange();
@@ -47,7 +49,7 @@ function Login() {
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-lg">
         <h1 className="text-2xl font-bold text-text text-center mb-8">登录</h1>
 
         <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
@@ -59,15 +61,18 @@ function Login() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text-secondary">邮箱</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="2024010914026@std.uestc.edu.cn"
-                className="px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
-                disabled={loading}
-              />
+              <span className="text-sm font-medium text-text-secondary">学号</span>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  value={studentId}
+                  onChange={(e) => setStudentId(e.target.value)}
+                  placeholder="2024010914026"
+                  className="flex-1 min-w-0 px-4 py-2.5 border border-border rounded-l-xl border-r-0 outline-none bg-surface-alt text-sm disabled:opacity-50"
+                  disabled={loading}
+                />
+                <span className="px-3 py-2.5 border border-border rounded-r-xl bg-surface-alt text-sm text-text-secondary select-none whitespace-nowrap flex-shrink-0">@std.uestc.edu.cn</span>
+              </div>
             </label>
 
             <label className="flex flex-col gap-1.5">

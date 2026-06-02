@@ -43,7 +43,7 @@ func setupRouter() *gin.Engine {
 	repo := persistence.NewPostgresRepo(pool)
 	testRepo = repo
 
-	userSvc := application.NewUserService(repo, repo)
+	userSvc := application.NewUserService(repo, repo, nil)
 	apptSvc := application.NewAppointmentService(repo, repo)
 	testUserSvc = userSvc
 

@@ -13,9 +13,11 @@ interface RegisterResponse {
   };
 }
 
+const EMAIL_SUFFIX = '@std.uestc.edu.cn';
+
 function Register() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [sending, setSending] = useState(false);
@@ -24,20 +26,18 @@ function Register() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
 
+  const fullEmail = studentId + EMAIL_SUFFIX;
+
   const handleSendCode = async () => {
     setError('');
-    if (!email) {
-      setError('请填写邮箱');
-      return;
-    }
-    if (!email.endsWith('@std.uestc.edu.cn')) {
-      setError('仅支持 @std.uestc.edu.cn 邮箱注册');
+    if (!studentId) {
+      setError('请填写学号');
       return;
     }
 
     setSending(true);
     try {
-      await apiPost('/auth/send-code', { email });
+      await apiPost('/auth/send-code', { email: fullEmail });
       setCodeSent(true);
       setCountdown(60);
       // 倒计时
@@ -61,7 +61,7 @@ function Register() {
     e.preventDefault();
     setError('');
 
-    if (!email || !code || !password) {
+    if (!studentId || !code || !password) {
       setError('请填写所有字段');
       return;
     }
@@ -73,7 +73,7 @@ function Register() {
     setLoading(true);
     try {
       const data = await apiPost<RegisterResponse>('/auth/register', {
-        email,
+        email: fullEmail,
         code,
         password,
       });
@@ -90,7 +90,7 @@ function Register() {
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-lg">
         <h1 className="text-2xl font-bold text-text text-center mb-8">创建账号</h1>
 
         <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
@@ -101,20 +101,21 @@ function Register() {
           )}
 
           <form onSubmit={handleRegister} className="flex flex-col gap-4">
-            {/* 邮箱 + 发送验证码 */}
+            {/* 学号 + 发送验证码 */}
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text-secondary">
-                邮箱 <span className="text-text-muted font-normal">（@std.uestc.edu.cn）</span>
-              </span>
+              <span className="text-sm font-medium text-text-secondary">学号</span>
               <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setCodeSent(false); }}
-                  placeholder="2024010914026@std.uestc.edu.cn"
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm bg-surface-alt disabled:opacity-50"
-                  disabled={loading}
-                />
+                <div className="flex-1 flex items-center min-w-0">
+                  <input
+                    type="text"
+                    value={studentId}
+                    onChange={(e) => { setStudentId(e.target.value); setCodeSent(false); }}
+                    placeholder="2024010914026"
+                    className="flex-1 min-w-0 px-4 py-2.5 border border-border rounded-l-xl border-r-0 outline-none bg-surface-alt text-sm disabled:opacity-50"
+                    disabled={loading}
+                  />
+                  <span className="px-3 py-2.5 border border-border rounded-r-xl bg-surface-alt text-sm text-text-secondary select-none whitespace-nowrap flex-shrink-0">@std.uestc.edu.cn</span>
+                </div>
                 <button
                   type="button"
                   onClick={handleSendCode}

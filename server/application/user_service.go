@@ -18,6 +18,7 @@ import (
 	"interview-server/domain/appointment"
 	"interview-server/domain/user"
 	"interview-server/infrastructure/auth"
+	"interview-server/infrastructure/mail"
 )
 
 // UserService 用户用例编排。
@@ -27,6 +28,7 @@ type UserService struct {
 	apptRepo          appointment.AppointmentRepository
 	verificationCodes map[string]verificationCode // email → code（开发阶段内存存储）
 	mu                sync.Mutex
+	mailSender        mail.Sender // nil 时降级为日志模式
 }
 
 type verificationCode struct {
@@ -36,12 +38,13 @@ type verificationCode struct {
 
 const verificationCodeTTL = 10 * time.Minute
 
-// NewUserService 创建用户服务。
-func NewUserService(userRepo user.UserRepository, apptRepo appointment.AppointmentRepository) *UserService {
+// NewUserService 创建用户服务。mailSender 可为 nil（降级为日志模式）。
+func NewUserService(userRepo user.UserRepository, apptRepo appointment.AppointmentRepository, mailSender mail.Sender) *UserService {
 	return &UserService{
 		userRepo:          userRepo,
 		apptRepo:          apptRepo,
 		verificationCodes: make(map[string]verificationCode),
+		mailSender:        mailSender,
 	}
 }
 
@@ -69,6 +72,16 @@ func (s *UserService) SendCode(email string) error {
 		ExpiresAt: time.Now().Add(verificationCodeTTL),
 	}
 	s.mu.Unlock()
+
+	// 优先通过 SMTP 发送，失败或未配置时降级为日志
+	if s.mailSender != nil {
+		if err := s.mailSender.SendVerificationCode(email, code); err != nil {
+			log.Printf("⚠️ 邮件发送失败: %v，降级为日志模式", err)
+			log.Printf("📧 [DEV] 验证码：%s → %s", email, code)
+		}
+		// 发送成功就不打印日志了（sender 内部已打印）
+		return nil
+	}
 
 	log.Printf("📧 [DEV] 验证码已发送到 %s: %s", email, code)
 	return nil
