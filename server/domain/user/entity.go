@@ -21,7 +21,6 @@ type User struct {
 	Avatar        string
 	ContactInfo   string
 	EmailVerified bool
-	VerifyToken   string
 	CreatedAt     time.Time
 }
 
@@ -40,16 +39,6 @@ func (u *User) AccountStatus() string {
 	return AccountStatusActive
 }
 
-// ClearVerifyToken 清除验证 token（一次性使用）。
-func (u *User) ClearVerifyToken() {
-	u.VerifyToken = ""
-}
-
-// MarkVerified 标记邮箱为已验证并清除 token。
-func (u *User) MarkVerified() {
-	u.EmailVerified = true
-	u.VerifyToken = ""
-}
 
 // UpdateProfile 更新个人资料。
 // 只更新非空字段，避免意外覆盖。

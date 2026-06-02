@@ -154,37 +154,6 @@ func TestPostgresRepo_Update_NotFound(t *testing.T) {
 	}
 }
 
-func TestPostgresRepo_FindByVerifyToken(t *testing.T) {
-	ctx := context.Background()
-	pool := testPool.NewPool(ctx)
-	defer pool.Close()
-	repo := NewPostgresRepo(pool)
-
-	u := newUser("dave@school.edu", "Dave")
-	u.VerifyToken = "token-abc-123"
-	mustCreateUser(t, repo, u)
-
-	found, err := repo.FindByVerifyToken("token-abc-123")
-	if err != nil {
-		t.Fatalf("FindByVerifyToken failed: %v", err)
-	}
-	if found.Email != "dave@school.edu" {
-		t.Errorf("Email = %q", found.Email)
-	}
-}
-
-func TestPostgresRepo_FindByVerifyToken_NotFound(t *testing.T) {
-	ctx := context.Background()
-	pool := testPool.NewPool(ctx)
-	defer pool.Close()
-	repo := NewPostgresRepo(pool)
-
-	_, err := repo.FindByVerifyToken("no-such-token")
-	if err != user.ErrInvalidToken {
-		t.Errorf("expected ErrInvalidToken, got %v", err)
-	}
-}
-
 func TestPostgresRepo_FindAll(t *testing.T) {
 	ctx := context.Background()
 	pool := testPool.NewPool(ctx)
@@ -201,9 +170,12 @@ func TestPostgresRepo_FindAll(t *testing.T) {
 	mustCreateUser(t, repo, u2)
 	mustCreateUser(t, repo, u3)
 
-	all := repo.FindAll()
+	all, total, err := repo.FindAll(1, 20)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
 	if len(all) != 2 {
-		t.Errorf("expected 2 verified users, got %d", len(all))
+		t.Errorf("expected 2 verified users, got %d (total=%d)", len(all), total)
 	}
 }
 

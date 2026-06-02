@@ -155,17 +155,6 @@ func (s *UserService) Register(req user.RegisterRequest) (*user.AuthResponse, er
 	}, nil
 }
 
-// VerifyEmail 验证邮箱。
-func (s *UserService) VerifyEmail(token string) error {
-	u, err := s.userRepo.FindByVerifyToken(token)
-	if err != nil {
-		return user.ErrInvalidToken
-	}
-
-	u.MarkVerified() // 使用聚合根方法
-	return s.userRepo.Update(u)
-}
-
 // Login 登录。
 func (s *UserService) Login(req user.LoginRequest) (*user.AuthResponse, error) {
 	req.Email = normalizeEmail(req.Email)

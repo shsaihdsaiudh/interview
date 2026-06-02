@@ -20,7 +20,7 @@ func TestUser_IsVerified(t *testing.T) {
 	t.Run("after mark verified", func(t *testing.T) {
 		u := &User{EmailVerified: true}
 		if !u.IsVerified() {
-			t.Error("expected IsVerified to be true after MarkVerified")
+			t.Error("expected IsVerified to be true when EmailVerified is true")
 		}
 	})
 }
@@ -43,37 +43,6 @@ func TestUser_AccountStatus(t *testing.T) {
 			t.Errorf("AccountStatus = %q, want %q", u.AccountStatus(), AccountStatusActive)
 		}
 	})
-}
-
-// =============================================================================
-// ClearVerifyToken
-// =============================================================================
-
-func TestUser_ClearVerifyToken(t *testing.T) {
-	u := &User{VerifyToken: "abc123"}
-	u.ClearVerifyToken()
-	if u.VerifyToken != "" {
-		t.Errorf("expected VerifyToken to be empty after ClearVerifyToken, got %q", u.VerifyToken)
-	}
-}
-
-// =============================================================================
-// MarkVerified
-// =============================================================================
-
-func TestUser_MarkVerified(t *testing.T) {
-	u := &User{
-		EmailVerified: false,
-		VerifyToken:   "token123",
-	}
-	u.MarkVerified()
-
-	if !u.EmailVerified {
-		t.Error("expected EmailVerified to be true after MarkVerified")
-	}
-	if u.VerifyToken != "" {
-		t.Errorf("expected VerifyToken to be cleared after MarkVerified, got %q", u.VerifyToken)
-	}
 }
 
 // =============================================================================

@@ -16,10 +16,8 @@ import (
 // mockUserRepo 实现 user.UserRepository，用于单元测试。
 type mockUserRepo struct {
 	usersByEmail   map[string]*user.User
-	usersByToken   map[string]*user.User
 	createErr      error
 	findByEmailErr error
-	findByTokenErr error
 	updateErr      error
 	deleteErr      error
 }
@@ -27,7 +25,6 @@ type mockUserRepo struct {
 func newMockUserRepo() *mockUserRepo {
 	return &mockUserRepo{
 		usersByEmail: make(map[string]*user.User),
-		usersByToken: make(map[string]*user.User),
 	}
 }
 
@@ -39,9 +36,6 @@ func (m *mockUserRepo) Create(u *user.User) error {
 		return user.ErrEmailAlreadyExists
 	}
 	m.usersByEmail[u.Email] = u
-	if u.VerifyToken != "" {
-		m.usersByToken[u.VerifyToken] = u
-	}
 	return nil
 }
 
@@ -52,17 +46,6 @@ func (m *mockUserRepo) FindByEmail(email string) (*user.User, error) {
 	u, ok := m.usersByEmail[email]
 	if !ok {
 		return nil, user.ErrUserNotFound
-	}
-	return u, nil
-}
-
-func (m *mockUserRepo) FindByVerifyToken(token string) (*user.User, error) {
-	if m.findByTokenErr != nil {
-		return nil, m.findByTokenErr
-	}
-	u, ok := m.usersByToken[token]
-	if !ok {
-		return nil, user.ErrInvalidToken
 	}
 	return u, nil
 }

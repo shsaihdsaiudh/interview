@@ -81,27 +81,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-// VerifyEmail 邮箱验证。
-func (h *UserHandler) VerifyEmail(c *gin.Context) {
-	token := c.Query("token")
-	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少验证 token"})
-		return
-	}
-
-	if err := h.userSvc.VerifyEmail(token); err != nil {
-		switch {
-		case errors.Is(err, user.ErrInvalidToken):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "验证失败，请稍后重试"})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "邮箱验证成功，现在可以登录了"})
-}
-
 // Login 用户登录。
 func (h *UserHandler) Login(c *gin.Context) {
 	var req user.LoginRequest

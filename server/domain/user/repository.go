@@ -9,9 +9,6 @@ type UserRepository interface {
 	// FindByEmail 按邮箱查找用户。找不到返回 ErrUserNotFound。
 	FindByEmail(email string) (*User, error)
 
-	// FindByVerifyToken 按邮箱验证 token 查找用户。
-	FindByVerifyToken(token string) (*User, error)
-
 	// Update 更新用户信息（所有字段全量更新）。
 	Update(user *User) error
 

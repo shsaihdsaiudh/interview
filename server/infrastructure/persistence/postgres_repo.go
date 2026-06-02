@@ -39,11 +39,11 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 func (r *PostgresRepo) Create(u *user.User) error {
 	_, err := r.pool.Exec(context.Background(),
 		`INSERT INTO users (email, password_hash, nickname, student_id, department,
-		 tags, avatar, contact_info, email_verified, verify_token, created_at)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		 tags, avatar, contact_info, email_verified, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
 		u.Email, u.PasswordHash, u.Nickname, u.StudentID,
 		u.Department, u.Tags, u.Avatar, u.ContactInfo,
-		u.EmailVerified, u.VerifyToken, u.CreatedAt,
+		u.EmailVerified, u.CreatedAt,
 	)
 	if err != nil {
 		if isDuplicateKey(err) {
@@ -59,36 +59,15 @@ func (r *PostgresRepo) FindByEmail(email string) (*user.User, error) {
 	u := &user.User{}
 	err := r.pool.QueryRow(context.Background(),
 		`SELECT email, password_hash, nickname, student_id, department,
-		        tags, avatar, contact_info, email_verified, verify_token, created_at
+		        tags, avatar, contact_info, email_verified, created_at
 		 FROM users WHERE email = $1`, email,
 	).Scan(
 		&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
 		&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
-		&u.EmailVerified, &u.VerifyToken, &u.CreatedAt,
+		&u.EmailVerified, &u.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, user.ErrUserNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
-}
-
-// FindByVerifyToken 按验证 token 查找用户。
-func (r *PostgresRepo) FindByVerifyToken(token string) (*user.User, error) {
-	u := &user.User{}
-	err := r.pool.QueryRow(context.Background(),
-		`SELECT email, password_hash, nickname, student_id, department,
-		        tags, avatar, contact_info, email_verified, verify_token, created_at
-		 FROM users WHERE verify_token = $1`, token,
-	).Scan(
-		&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
-		&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
-		&u.EmailVerified, &u.VerifyToken, &u.CreatedAt,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, user.ErrInvalidToken
 	}
 	if err != nil {
 		return nil, err
@@ -101,11 +80,11 @@ func (r *PostgresRepo) Update(u *user.User) error {
 	tag, err := r.pool.Exec(context.Background(),
 		`UPDATE users SET password_hash=$1, nickname=$2, student_id=$3,
 		 department=$4, tags=$5, avatar=$6, contact_info=$7,
-		 email_verified=$8, verify_token=$9, created_at=$10
-		 WHERE email=$11`,
+		 email_verified=$8, created_at=$9
+		 WHERE email=$10`,
 		u.PasswordHash, u.Nickname, u.StudentID,
 		u.Department, u.Tags, u.Avatar, u.ContactInfo,
-		u.EmailVerified, u.VerifyToken, u.CreatedAt,
+		u.EmailVerified, u.CreatedAt,
 		u.Email,
 	)
 	if err != nil {
@@ -138,7 +117,7 @@ func (r *PostgresRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
 
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT email, password_hash, nickname, student_id, department,
-		        tags, avatar, contact_info, email_verified, verify_token, created_at
+		        tags, avatar, contact_info, email_verified, created_at
 		 FROM users WHERE email_verified = true
 		 ORDER BY created_at DESC
 		 LIMIT $1 OFFSET $2`, pageSize, offset,
@@ -154,7 +133,7 @@ func (r *PostgresRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
 		if err := rows.Scan(
 			&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
 			&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
-			&u.EmailVerified, &u.VerifyToken, &u.CreatedAt,
+			&u.EmailVerified, &u.CreatedAt,
 		); err != nil {
 			continue
 		}
