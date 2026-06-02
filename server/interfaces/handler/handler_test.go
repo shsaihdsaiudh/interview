@@ -71,6 +71,8 @@ func setupRouter() *gin.Engine {
 			auth.POST("/send-code", userH.SendCode)
 			auth.POST("/register", userH.Register)
 			auth.POST("/login", userH.Login)
+			auth.POST("/forgot-password", userH.ForgotPassword)
+			auth.POST("/reset-password", userH.ResetPassword)
 
 			authRequired := auth.Group("")
 			authRequired.Use(middleware.JWTAuth())
@@ -742,6 +744,155 @@ func TestHandler_DeleteAccount_WithActiveAppointment(t *testing.T) {
 		`{"password":"pass123"}`, studentToken)
 	if w.Code != http.StatusConflict {
 		t.Errorf("student with active appointment: expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// =============================================================================
+// 忘记密码 & 重置密码
+// =============================================================================
+
+func TestHandler_ForgotPassword_Success(t *testing.T) {
+	email := "forgot-ok@std.uestc.edu.cn"
+	_ = registerHelper(t, email, "pass123", "ForgotOK", "FO001")
+
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	resp := parseJSON(w)
+	if msg, ok := resp["message"].(string); !ok || msg == "" {
+		t.Errorf("expected non-empty message, got %v", resp["message"])
+	}
+}
+
+func TestHandler_ForgotPassword_UserNotFound(t *testing.T) {
+	email := "nonexist@std.uestc.edu.cn"
+
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	// 为安全起见，即使用户不存在也返回 200
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password for nonexistent user: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	resp := parseJSON(w)
+	if msg, ok := resp["message"].(string); !ok || msg == "" {
+		t.Errorf("expected non-empty message, got %v", resp["message"])
+	}
+}
+
+func TestHandler_ResetPassword_Success(t *testing.T) {
+	email := "reset-ok@std.uestc.edu.cn"
+	oldPassword := "oldpass123"
+	newPassword := "newpass456"
+	_ = registerHelper(t, email, oldPassword, "ResetOK", "RO001")
+
+	// 1. 发送重置验证码
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 2. 获取重置验证码
+	resetCode := testUserSvc.ResetCodeForTest(email)
+	if resetCode == "" {
+		t.Fatal("reset code not found")
+	}
+
+	// 3. 用验证码重置密码
+	resetBody := `{"email":"` + email + `","code":"` + resetCode + `","password":"` + newPassword + `"}`
+	w = doJSON("POST", "/api/v1/auth/reset-password", resetBody)
+	if w.Code != http.StatusOK {
+		t.Fatalf("reset-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	resp := parseJSON(w)
+	if msg, ok := resp["message"].(string); !ok || msg != "密码重置成功，请登录" {
+		t.Errorf("expected '密码重置成功，请登录', got %v", resp["message"])
+	}
+
+	// 4. 用新密码登录成功
+	w = doJSON("POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"`+newPassword+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("login with new password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	loginResp := parseJSON(w)
+	if _, ok := loginResp["token"].(string); !ok {
+		t.Error("login response should include token")
+	}
+}
+
+func TestHandler_ResetPassword_InvalidCode(t *testing.T) {
+	email := "reset-badcode@std.uestc.edu.cn"
+	_ = registerHelper(t, email, "pass123", "BadCode", "BC001")
+
+	// 发送重置验证码
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 使用错误的验证码重置
+	resetBody := `{"email":"` + email + `","code":"000000","password":"newpass123"}`
+	w = doJSON("POST", "/api/v1/auth/reset-password", resetBody)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("reset with wrong code: expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_ResetPassword_ExpiredCode(t *testing.T) {
+	email := "reset-expired@std.uestc.edu.cn"
+	_ = registerHelper(t, email, "pass123", "Expired", "EX001")
+
+	// 发送重置验证码
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 获取验证码并将其标记为过期
+	resetCode := testUserSvc.ResetCodeForTest(email)
+	if resetCode == "" {
+		t.Fatal("reset code not found")
+	}
+	testUserSvc.ExpireResetCodeForTest(email)
+
+	// 使用过期验证码重置
+	resetBody := `{"email":"` + email + `","code":"` + resetCode + `","password":"newpass123"}`
+	w = doJSON("POST", "/api/v1/auth/reset-password", resetBody)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("reset with expired code: expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestHandler_ResetPassword_OldPasswordInvalid(t *testing.T) {
+	email := "reset-oldpw@std.uestc.edu.cn"
+	oldPassword := "oldpass123"
+	newPassword := "newpass789"
+	_ = registerHelper(t, email, oldPassword, "OldPw", "OP001")
+
+	// 1. 发送重置验证码
+	w := doJSON("POST", "/api/v1/auth/forgot-password", `{"email":"`+email+`"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forgot-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 2. 获取重置验证码
+	resetCode := testUserSvc.ResetCodeForTest(email)
+	if resetCode == "" {
+		t.Fatal("reset code not found")
+	}
+
+	// 3. 用验证码重置密码
+	resetBody := `{"email":"` + email + `","code":"` + resetCode + `","password":"` + newPassword + `"}`
+	w = doJSON("POST", "/api/v1/auth/reset-password", resetBody)
+	if w.Code != http.StatusOK {
+		t.Fatalf("reset-password: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// 4. 用旧密码登录应返回 401
+	w = doJSON("POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"`+oldPassword+`"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("login with old password after reset: expected 401, got %d: %s", w.Code, w.Body.String())
 	}
 }
 

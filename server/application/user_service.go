@@ -452,6 +452,24 @@ func (s *UserService) VerificationCodeForTest(email string) string {
 	return s.verificationCodes[normalizeEmail(email)].Code
 }
 
+// ResetCodeForTest 仅供测试使用：获取指定邮箱的密码重置验证码。
+func (s *UserService) ResetCodeForTest(email string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.resetCodes[normalizeEmail(email)].Code
+}
+
+// ExpireResetCodeForTest 仅供测试使用：将指定邮箱的重置验证码标记为过期。
+func (s *UserService) ExpireResetCodeForTest(email string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	email = normalizeEmail(email)
+	if v, ok := s.resetCodes[email]; ok {
+		v.ExpiresAt = time.Now().Add(-time.Minute)
+		s.resetCodes[email] = v
+	}
+}
+
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }
