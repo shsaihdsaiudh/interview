@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiGet, apiPut, apiDelete, getApiErrorMessage, removeToken } from '../api/client';
+import { apiGet, apiPut, apiDelete, apiUpload, getApiErrorMessage, removeToken } from '../api/client';
 import { getUser, setUser, notifyAuthChange, clearUser } from '../components/Navbar';
 
 interface ProfileData {
@@ -31,6 +31,11 @@ function Settings() {
   const [tagsStr, setTagsStr] = useState('');
   const [avatar, setAvatar] = useState('');
   const [contactInfo, setContactInfo] = useState('');
+
+  // ── 头像上传 ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState('');
 
   // ── 修改密码 ──
   const [oldPassword, setOldPassword] = useState('');
@@ -118,6 +123,43 @@ function Settings() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 预览
+    const previewURL = URL.createObjectURL(file);
+    setAvatarPreview(previewURL);
+
+    // 前端校验
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showMsg('仅支持 JPEG、PNG、WebP 格式', 'error');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      showMsg('头像文件大小不能超过 2MB', 'error');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const res = await apiUpload<{ avatar_url: string }>('/profile/avatar', file);
+      setAvatar(res.avatar_url);
+      showMsg('头像上传成功');
+    } catch (err: unknown) {
+      showMsg(getApiErrorMessage(err, '上传失败'), 'error');
+      URL.revokeObjectURL(previewURL);
+      setAvatarPreview('');
+    } finally {
+      setAvatarUploading(false);
+      // 重置 file input 以便重复上传同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const showDeleteMsg = (text: string, type: 'success' | 'error' = 'error') => {
     setDeleteMsg(text);
     setDeleteMsgType(type);
@@ -202,7 +244,36 @@ function Settings() {
           </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-medium text-text-secondary">头像 URL</span>
-            <input className="px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://..." />
+            <div className="flex items-center gap-3 flex-wrap">
+              <input className="flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-border text-sm bg-surface-alt" value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://...或上传头像" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarUploading}
+                className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium transition cursor-pointer border-none disabled:opacity-50 whitespace-nowrap"
+              >
+                {avatarUploading ? '上传中...' : '上传头像'}
+              </button>
+            </div>
+            {(avatarPreview || avatar) && (
+              <div className="mt-2 flex items-center gap-3">
+                <img
+                  src={avatarPreview || avatar}
+                  alt="头像预览"
+                  className="w-12 h-12 rounded-full object-cover border border-border"
+                />
+                {avatarPreview && (
+                  <span className="text-xs text-text-secondary">预览中</span>
+                )}
+              </div>
+            )}
           </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-sm font-medium text-text-secondary">联系方式</span>

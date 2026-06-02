@@ -79,4 +79,24 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   );
 }
 
+// ── 文件上传 ──
+
+// apiUpload 上传文件（multipart/form-data），返回响应 data。
+export async function apiUpload<T>(url: string, file: File, fieldName = 'avatar'): Promise<T> {
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await axios.post<T>(`${apiClient.defaults.baseURL}${url}`, formData, {
+    headers,
+    timeout: 15000,
+  });
+  return res.data;
+}
+
 export default apiClient;

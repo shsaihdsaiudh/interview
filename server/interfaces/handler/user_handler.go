@@ -1,8 +1,13 @@
 package handler
 
 import (
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -278,6 +283,92 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// UploadAvatar 上传头像。
+// 接收 multipart/form-data，限制 JPEG/PNG/WebP ≤2MB。
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	email := c.GetString("user_email")
+
+	file, header, err := c.Request.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择头像文件"})
+		return
+	}
+	defer file.Close()
+
+	// ── 校验文件类型 ──
+	buf := make([]byte, 512)
+	if _, err := file.Read(buf); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无法读取文件"})
+		return
+	}
+	contentType := http.DetectContentType(buf)
+	allowed := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/webp": true,
+	}
+	if !allowed[contentType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "仅支持 JPEG、PNG、WebP 格式的头像"})
+		return
+	}
+
+	// ── 校验文件大小 ──
+	const maxSize = 2 << 20 // 2MB
+	if header.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "头像文件大小不能超过 2MB"})
+		return
+	}
+
+	// ── 读取完整文件内容 ──
+	if _, err := file.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取文件失败"})
+		return
+	}
+	fileData := make([]byte, header.Size)
+	if _, err := file.Read(fileData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取文件失败"})
+		return
+	}
+
+	// ── 重新验证实际内容（防止伪造 Content-Type）──
+	actualType := http.DetectContentType(fileData)
+	if !allowed[actualType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "仅支持 JPEG、PNG、WebP 格式的头像"})
+		return
+	}
+
+	// ── 生成文件名并保存 ──
+	emailHash := sha256Hex(email)
+	ext := extensionFromContentType(actualType)
+	filename := fmt.Sprintf("%s_%d.%s", emailHash, time.Now().UnixMilli(), ext)
+
+	uploadDir := "server/uploads/avatars"
+	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建上传目录失败"})
+		return
+	}
+
+	destPath := filepath.Join(uploadDir, filename)
+	if err := os.WriteFile(destPath, fileData, 0o644); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存头像文件失败"})
+		return
+	}
+
+	// ── 更新用户 avatar 字段 ──
+	avatarURL := "/uploads/avatars/" + filename
+	_, err = h.userSvc.UpdateProfile(email, user.UpdateProfileRequest{Avatar: avatarURL})
+	if err != nil {
+		// 文件已保存，但数据库更新失败 — 记录错误但仍返回 URL
+		c.JSON(http.StatusOK, gin.H{
+			"avatar_url": avatarURL,
+			"warning":    "头像文件已上传，但更新资料失败，请重试保存",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"avatar_url": avatarURL})
+}
+
 // ListUsers 用户列表（公开）。
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	users := h.userSvc.GetAllUsers()
@@ -302,4 +393,28 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, detail)
+}
+
+// =============================================================================
+// 辅助函数
+// =============================================================================
+
+// sha256Hex 返回字符串的 SHA-256 哈希前 16 个十六进制字符。
+func sha256Hex(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return fmt.Sprintf("%x", h)[:16]
+}
+
+// extensionFromContentType 根据 MIME 类型返回文件扩展名。
+func extensionFromContentType(ct string) string {
+	switch ct {
+	case "image/jpeg":
+		return "jpg"
+	case "image/png":
+		return "png"
+	case "image/webp":
+		return "webp"
+	default:
+		return "bin"
+	}
 }

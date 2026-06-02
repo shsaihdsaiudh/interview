@@ -15,6 +15,9 @@ func RegisterRoutes(
 	userH *handler.UserHandler,
 	apptH *handler.AppointmentHandler,
 ) {
+	// ── 静态文件服务：映射 /uploads/ 到 server/uploads/ 目录 ──
+	r.Static("/uploads", "./server/uploads")
+
 	// CORS 中间件
 	r.Use(middleware.CORS())
 
@@ -57,6 +60,7 @@ func RegisterRoutes(
 			// 个人资料
 			protected.GET("/profile", userH.GetProfile)
 			protected.PUT("/profile", userH.UpdateProfile)
+			protected.POST("/profile/avatar", userH.UploadAvatar)
 
 			// 空闲时间管理
 			protected.GET("/availability", apptH.GetMyAvailability)
