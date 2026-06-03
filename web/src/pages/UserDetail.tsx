@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiGet, apiPost, apiPut, apiDelete, apiUpload, getApiErrorMessage, removeToken } from '../api/client';
 import { getUser, setUser, notifyAuthChange, clearUser } from '../components/Navbar';
+import WeekCalendar from '../components/WeekCalendar';
 
 interface UserInfo {
   email: string;
@@ -28,11 +29,6 @@ interface DetailData {
   availabilities: TimeSlot[];
 }
 
-const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-function getDayOfWeek(dateStr: string): string {
-  return dayNames[new Date(dateStr).getDay()];
-}
-
 const avatarColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
 
 function UserDetail() {
@@ -43,10 +39,6 @@ function UserDetail() {
   const [detail, setDetail] = useState<DetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [bookingId, setBookingId] = useState<string | null>(null);
-  const [message, setMessage] = useState('');
-  const [bookingError, setBookingError] = useState('');
-  const [bookingSuccess, setBookingSuccess] = useState('');
 
   // ── edit mode state ──
   const [editNickname, setEditNickname] = useState('');
@@ -89,27 +81,10 @@ function UserDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleBook = async () => {
-    if (!bookingId) return;
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    setBookingError('');
-    setBookingSuccess('');
-    try {
-      await apiPost('/appointments', {
-        time_slot_id: bookingId,
-        message: message || '希望预约一场模拟面试',
-      });
-      setBookingSuccess('预约成功，请等待对方确认');
-      setBookingId(null);
-      setMessage('');
-    } catch (err: unknown) {
-      setBookingError(getApiErrorMessage(err, '预约失败'));
-    }
+  // ── booking ──
+  const handleBook = async (slotId: string, message: string) => {
+    await apiPost("/appointments", { time_slot_id: slotId, message });
   };
-
   // ── init edit fields ──
   useEffect(() => {
     if (detail) {
@@ -491,90 +466,12 @@ function UserDetail() {
         </div>
       )}
 
-      {/* availabilities */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm p-8">
-        <h2 className="text-lg font-bold text-text mb-4">空闲时间</h2>
-
-        {availabilities.length === 0 ? (
-          <div className="text-center py-12 text-text-muted">
-            <p className="font-medium">暂无空闲时间</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {availabilities.map((slot) => {
-              const selected = bookingId === slot.id;
-              return (
-                <div
-                  key={slot.id}
-                  onClick={() => { if (!isSelf) setBookingId(selected ? null : slot.id); }}
-                  className={`rounded-xl p-4 border transition ${
-                    selected
-                      ? 'border-brand-400 bg-brand-50/50'
-                      : 'border-border bg-gray-50/50 hover:border-gray-300'
-                  } ${!isSelf ? 'cursor-pointer' : ''}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-text text-sm">
-                        {slot.date} <span className="text-text-muted font-normal">{getDayOfWeek(slot.date)}</span>
-                      </div>
-                      <div className="text-sm text-text-secondary mt-0.5">
-                        {slot.start_time} - {slot.end_time}
-                      </div>
-                    </div>
-                    {!isSelf && !selected && (
-                      <span className="text-xs text-text-muted">选择</span>
-                    )}
-                    {selected && (
-                      <span className="text-xs text-brand-600 font-medium">已选中</span>
-                    )}
-                  </div>
-
-                  {selected && (
-                    <div className="mt-3 pt-3 border-t border-brand-200">
-                      <textarea
-                        placeholder="附言：简单介绍一下你想练习的方向..."
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg border border-border text-sm resize-y min-h-[72px]"
-                        rows={3}
-                      />
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={handleBook}
-                          className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium
-                                     transition cursor-pointer border-none"
-                        >
-                          发起预约
-                        </button>
-                        <button
-                          onClick={() => setBookingId(null)}
-                          className="px-4 py-2 rounded-lg border border-border bg-white text-text-secondary text-sm
-                                     font-medium hover:bg-gray-50 transition cursor-pointer"
-                        >
-                          取消
-                        </button>
-                        {bookingError && <span className="text-sm text-danger">{bookingError}</span>}
-                        {bookingSuccess && <span className="text-sm text-success">{bookingSuccess}</span>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {isSelf && (
-          <button
-            onClick={() => navigate('/appointments')}
-            className="mt-4 w-full py-2.5 rounded-xl border border-dashed border-border text-text-secondary text-sm
-                       font-medium hover:border-brand-300 hover:text-brand-600 transition cursor-pointer bg-transparent"
-          >
-            管理我的空闲时间
-          </button>
-        )}
-      </div>
+      {/* Week Calendar */}
+      <WeekCalendar
+        availabilities={availabilities}
+        isSelf={isSelf}
+        onBook={handleBook}
+      />
     </div>
   );
 }
