@@ -42,6 +42,23 @@ npm run dev
 
 > 注册时需要使用 `@std.uestc.edu.cn` 结尾的邮箱。开发阶段验证码会打印在后端控制台。
 
+### 4. 注入测试数据（可选）
+
+```bash
+cd server
+go run ./cmd/seed/
+```
+
+向数据库注入 5 个测试用户（密码统一为 `test123`）、招募卡片、未来 7 天随机空闲时间段、以及 3 条示例预约记录。**幂等**：重复运行不会产生重复数据。
+
+| 用户 | 邮箱 | 角色 | 技能 |
+|------|------|------|------|
+| 张三 | zhangsan@test.com | both | React, TypeScript, Node.js |
+| 李四 | lisi@test.com | interviewer | Go, Python, Docker |
+| 王五 | wangwu@test.com | interviewee | Java, Spring, MySQL |
+| 赵六 | zhaoliu@test.com | both | Vue, JavaScript, CSS |
+| 钱七 | qianqi@test.com | interviewer | Rust, C++, 系统设计 |
+
 ### 环境变量
 
 | 变量 | 默认值 | 说明 |
@@ -55,7 +72,9 @@ npm run dev
 ├── docker-compose.yml          # PostgreSQL 17
 ├── docker/init.sql             # 建表 DDL
 ├── server/                     # Go 后端
-│   ├── cmd/main.go             # 入口
+│   ├── cmd/
+│   │   ├── main.go              # 入口
+│   │   └── seed/main.go         # 测试数据注入脚本
 │   ├── domain/                 # 领域层（entity + repository 接口）
 │   ├── application/            # 应用服务层
 │   ├── infrastructure/         # 基础设施（PostgreSQL、JWT）
