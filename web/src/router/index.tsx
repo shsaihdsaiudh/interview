@@ -9,6 +9,7 @@ import Register from '../pages/Register';
 import ForgotPassword from '../pages/ForgotPassword';
 import Appointments from '../pages/Appointments';
 import Settings from '../pages/Settings';
+import CreateCard from '../pages/CreateCard';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { path: '/forgot-password', element: <ForgotPassword /> },
       { path: '/appointments', element: <Appointments /> },
       { path: '/settings', element: <Settings /> },
+      { path: '/my-card', element: <CreateCard /> },
     ],
   },
 ]);
