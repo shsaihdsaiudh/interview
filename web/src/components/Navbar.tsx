@@ -96,16 +96,18 @@ function Navbar() {
             <>
               {navLink('/find', '找人')}
               {navLink('/appointments', '预约')}
-              {navLink('/settings', '设置')}
 
               <span className="w-px h-4 bg-border mx-2" />
 
-              <span className="text-sm font-medium text-text flex items-center gap-1.5">
+              <Link
+                to={`/user/${user.email}`}
+                className="text-sm font-medium text-text flex items-center gap-1.5 no-underline hover:text-brand-600 transition"
+              >
                 <span className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold">
                   {user.nickname.charAt(0)}
                 </span>
                 <span className="hidden sm:inline">{user.nickname}</span>
-              </span>
+              </Link>
 
               <button
                 onClick={handleLogout}
