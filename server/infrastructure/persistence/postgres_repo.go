@@ -5,12 +5,14 @@ package persistence
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"interview-server/domain/appointment"
+	"interview-server/domain/recruitment"
 	"interview-server/domain/user"
 )
 
@@ -20,10 +22,11 @@ type PostgresRepo struct {
 	pool *pgxpool.Pool
 }
 
-// 编译时接口检查：确保 PostgresRepo 实现了两个领域接口
+// 编译时接口检查：确保 PostgresRepo 实现了三个领域接口
 var (
-	_ user.UserRepository                 = (*PostgresRepo)(nil)
-	_ appointment.AppointmentRepository   = (*PostgresRepo)(nil)
+	_ user.UserRepository                     = (*PostgresRepo)(nil)
+	_ appointment.AppointmentRepository       = (*PostgresRepo)(nil)
+	_ recruitment.RecruitmentCardRepository   = (*PostgresRepo)(nil)
 )
 
 // NewPostgresRepo 创建 PostgreSQL 仓库。
@@ -369,4 +372,145 @@ func (r *PostgresRepo) FindAvailabilitiesByUserID(userID string) []*appointment.
 func isDuplicateKey(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+
+// =============================================================================
+// recruitment.RecruitmentCardRepository 接口实现
+// =============================================================================
+
+// Upsert 创建或更新招募卡片（基于 user_id 唯一约束）。
+func (r *PostgresRepo) Upsert(card *recruitment.RecruitmentCard) error {
+	_, err := r.pool.Exec(context.Background(),
+		`INSERT INTO recruitment_cards (id, user_id, skills, target_companies, role,
+		 experience_years, bio, is_active, created_at, updated_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		 ON CONFLICT (user_id) DO UPDATE SET
+		   skills = EXCLUDED.skills,
+		   target_companies = EXCLUDED.target_companies,
+		   role = EXCLUDED.role,
+		   experience_years = EXCLUDED.experience_years,
+		   bio = EXCLUDED.bio,
+		   is_active = EXCLUDED.is_active,
+		   updated_at = EXCLUDED.updated_at`,
+		card.ID, card.UserID, card.Skills, card.TargetCompanies,
+		card.Role, card.ExperienceYears, card.Bio, card.IsActive,
+		card.CreatedAt, card.UpdatedAt,
+	)
+	return err
+}
+
+// FindByUserID 按用户 ID 查找招募卡片。
+func (r *PostgresRepo) FindByUserID(userID string) (*recruitment.RecruitmentCard, error) {
+	card := &recruitment.RecruitmentCard{}
+	err := r.pool.QueryRow(context.Background(),
+		`SELECT id, user_id, skills, target_companies, role,
+		        experience_years, bio, is_active, created_at, updated_at
+		 FROM recruitment_cards WHERE user_id = $1`, userID,
+	).Scan(
+		&card.ID, &card.UserID, &card.Skills, &card.TargetCompanies,
+		&card.Role, &card.ExperienceYears, &card.Bio, &card.IsActive,
+		&card.CreatedAt, &card.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, recruitment.ErrCardNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return card, nil
+}
+
+// List 列表查询，支持多条件筛选和分页。
+func (r *PostgresRepo) List(filter recruitment.ListCardsFilter) ([]*recruitment.RecruitmentCard, int, error) {
+	// 构建动态查询条件
+	var conditions []string
+	var args []interface{}
+	argIdx := 1
+
+	// 仅返回活跃卡片
+	conditions = append(conditions, "is_active = true")
+
+	if filter.Skill != "" {
+		conditions = append(conditions, fmt.Sprintf("$%d = ANY(skills)", argIdx))
+		args = append(args, filter.Skill)
+		argIdx++
+	}
+
+	if filter.Company != "" {
+		conditions = append(conditions, fmt.Sprintf("$%d = ANY(target_companies)", argIdx))
+		args = append(args, filter.Company)
+		argIdx++
+	}
+
+	if filter.Role != "" {
+		conditions = append(conditions, fmt.Sprintf("role = $%d", argIdx))
+		args = append(args, filter.Role)
+		argIdx++
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + conditions[0]
+		for _, c := range conditions[1:] {
+			whereClause += " AND " + c
+		}
+	}
+
+	// 查询总数
+	var total int
+	countSQL := "SELECT COUNT(*) FROM recruitment_cards " + whereClause
+	if err := r.pool.QueryRow(context.Background(), countSQL, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []*recruitment.RecruitmentCard{}, 0, nil
+	}
+
+	// 分页
+	page := filter.Page
+	if page < 1 {
+		page = 1
+	}
+	size := filter.Size
+	if size < 1 {
+		size = 20
+	}
+	offset := (page - 1) * size
+
+	// 追加分页参数
+	dataArgs := make([]interface{}, len(args))
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, size, offset)
+
+	dataSQL := fmt.Sprintf(
+		`SELECT id, user_id, skills, target_companies, role,
+		        experience_years, bio, is_active, created_at, updated_at
+		 FROM recruitment_cards %s
+		 ORDER BY updated_at DESC
+		 LIMIT $%d OFFSET $%d`,
+		whereClause, argIdx, argIdx+1,
+	)
+
+	rows, err := r.pool.Query(context.Background(), dataSQL, dataArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var cards []*recruitment.RecruitmentCard
+	for rows.Next() {
+		card := &recruitment.RecruitmentCard{}
+		if err := rows.Scan(
+			&card.ID, &card.UserID, &card.Skills, &card.TargetCompanies,
+			&card.Role, &card.ExperienceYears, &card.Bio, &card.IsActive,
+			&card.CreatedAt, &card.UpdatedAt,
+		); err != nil {
+			continue
+		}
+		cards = append(cards, card)
+	}
+
+	return cards, total, nil
 }

@@ -24,4 +24,13 @@
 
 ## ✅ 已完成
 
-（暂无）
+### 招募卡片 (Recruitment Card) — 2026-06-03
+
+- **核心思路**：用户可以发布自己的面试需求或能力名片（招募卡片），包含技能标签、目标公司、角色、经验年限、个人简介等，供他人搜索和发现。
+- **已完成工作**：
+  1. **domain/recruitment/** — RecruitmentCard 聚合根（Activate/Deactivate/CanBeManagedBy 行为方法）、RecruitmentCardRepository 接口、领域错误、单元测试
+  2. **infrastructure/persistence/** — recruitment_cards 表 migration（docker/init.sql + testutil/pg.go）、PostgresRepo 实现（Upsert/FindByUserID/List 含动态筛选和分页）
+  3. **application/** — RecruitmentService（CreateOrUpdateCard / GetCardByUserID / ListCards + 角色校验 + 用户存在性校验）、单元测试
+  4. **interfaces/handler/** — RecruitmentHandler（PUT/GET /api/v1/recruitment-card、GET /api/v1/recruitment-cards 含分页和筛选）
+  5. **routes.go + main.go** — 注册路由和依赖注入
+- **涉及模块**：domain/recruitment、infrastructure/persistence、application/recruitment_service、interfaces/handler/recruitment_handler、routes.go、main.go、docker/init.sql、testutil/pg.go

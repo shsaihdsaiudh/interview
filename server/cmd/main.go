@@ -35,14 +35,16 @@ func main() {
 	// ── 4. 应用层：注入领域接口（依赖反转 — 应用层不依赖具体实现）──
 	userSvc := application.NewUserService(repo, repo, mailSender)
 	apptSvc := application.NewAppointmentService(repo, repo)
+	recruitSvc := application.NewRecruitmentService(repo, repo)
 
 	// ── 5. 接口层：HTTP 处理器 ──
 	userH := handler.NewUserHandler(userSvc)
 	apptH := handler.NewAppointmentHandler(apptSvc)
+	recruitH := handler.NewRecruitmentHandler(recruitSvc)
 
 	// ── 6. 路由注册 ──
 	r := gin.Default()
-	interfaces.RegisterRoutes(r, userH, apptH)
+	interfaces.RegisterRoutes(r, userH, apptH, recruitH)
 
 	// ── 7. 启动服务 ──
 	port := os.Getenv("PORT")

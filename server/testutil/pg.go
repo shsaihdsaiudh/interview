@@ -138,10 +138,26 @@ CREATE TABLE appointments (
     CONSTRAINT chk_status CHECK (status IN ('pending', 'accepted', 'rejected'))
 );
 
+CREATE TABLE recruitment_cards (
+    id               TEXT PRIMARY KEY,
+    user_id          TEXT NOT NULL UNIQUE REFERENCES users(email) ON DELETE CASCADE,
+    skills           TEXT[] NOT NULL DEFAULT '{}',
+    target_companies TEXT[] NOT NULL DEFAULT '{}',
+    role             VARCHAR(20) NOT NULL DEFAULT 'both',
+    experience_years INT NOT NULL DEFAULT 0,
+    bio              TEXT NOT NULL DEFAULT '',
+    is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_role CHECK (role IN ('interviewee', 'interviewer', 'both'))
+);
+
 CREATE INDEX idx_avail_user  ON availabilities(user_id);
 CREATE INDEX idx_avail_date  ON availabilities(date);
 CREATE INDEX idx_appt_mentor  ON appointments(mentor_id);
 CREATE INDEX idx_appt_student ON appointments(student_id);
 CREATE INDEX idx_appt_slot    ON appointments(time_slot_id);
 CREATE INDEX idx_appt_status  ON appointments(status);
+CREATE INDEX idx_card_user    ON recruitment_cards(user_id);
+CREATE INDEX idx_card_role    ON recruitment_cards(role);
 `

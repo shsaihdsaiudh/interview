@@ -14,6 +14,7 @@ func RegisterRoutes(
 	r *gin.Engine,
 	userH *handler.UserHandler,
 	apptH *handler.AppointmentHandler,
+	recruitH *handler.RecruitmentHandler,
 ) {
 	// ── 静态文件服务：映射 /uploads/ 到 server/uploads/ 目录 ──
 	r.Static("/uploads", "./server/uploads")
@@ -52,6 +53,10 @@ func RegisterRoutes(
 		v1.GET("/users", userH.ListUsers)
 		v1.GET("/users/:id", middleware.OptionalJWTAuth(), userH.GetUser)
 
+		// ── 招募卡片路由（部分公开）──
+		v1.GET("/recruitment-card", recruitH.GetCardByUserID)
+		v1.GET("/recruitment-cards", recruitH.ListCards)
+
 		// ── 需要登录的路由 ──
 		protected := v1.Group("")
 		protected.Use(middleware.JWTAuth())
@@ -71,6 +76,9 @@ func RegisterRoutes(
 			protected.GET("/appointments", apptH.GetMyAppointments)
 			protected.PUT("/appointments/:id/accept", apptH.AcceptAppointment)
 			protected.PUT("/appointments/:id/reject", apptH.RejectAppointment)
+
+			// 招募卡片管理
+			protected.PUT("/recruitment-card", recruitH.CreateOrUpdateCard)
 		}
 	}
 }
