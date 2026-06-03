@@ -264,7 +264,7 @@ export default function CreateCard() {
     setSubmitting(true);
     try {
       await apiPut('/recruitment-card', form);
-      navigate('/find', { replace: true });
+      navigate(`/find?created=${encodeURIComponent(isEdit ? '卡片已更新' : '卡片已发布')}`, { replace: true });
     } catch (err) {
       setSubmitError(getApiErrorMessage(err, '保存失败，请重试'));
     } finally {

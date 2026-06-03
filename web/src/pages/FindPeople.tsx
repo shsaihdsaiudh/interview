@@ -45,7 +45,8 @@ function FindPeople() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const [toast, setToast] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const buildParams = useCallback(
     (pageNum: number) => {
@@ -105,6 +106,24 @@ function FindPeople() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [keyword, selectedSkills, selectedCompanies, role, expMin, expMax]);
 
+  // ── toast on card created/updated ──
+  useEffect(() => {
+    const created = searchParams.get('created');
+    if (created) {
+      setToast(decodeURIComponent(created));
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('created');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(''), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const handleLoadMore = () => fetchCards(page + 1, false);
 
   const toggleSkill = (skill: string) => {
@@ -129,6 +148,13 @@ function FindPeople() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 pb-12">
+      {/* ── Toast ── */}
+      {toast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium shadow-sm">
+          {toast}
+        </div>
+      )}
+
       {/* ── 搜索栏（固定）── */}
       <div className="sticky top-14 z-40 -mx-6 px-6 pt-6 pb-4 bg-surface/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center gap-3 flex-wrap">

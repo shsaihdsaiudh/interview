@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiPost, getApiErrorMessage, setToken } from '../api/client';
 import { setUser, notifyAuthChange, getUser } from '../components/Navbar';
 
@@ -19,16 +19,18 @@ const EMAIL_SUFFIX = '@std.uestc.edu.cn';
 
 function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentUser = getUser();
+  const redirect = searchParams.get('redirect');
 
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 已登录用户跳转首页
+  // 已登录用户跳转首页或 redirect
   if (currentUser) {
-    navigate('/', { replace: true });
+    navigate(redirect || '/', { replace: true });
     return null;
   }
 
@@ -47,7 +49,7 @@ function Login() {
       setToken(data.token);
       setUser({ email: data.user.email, nickname: data.user.nickname });
       notifyAuthChange();
-      navigate('/');
+      navigate(redirect || '/');
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, '登录失败，请稍后重试'));
     } finally {

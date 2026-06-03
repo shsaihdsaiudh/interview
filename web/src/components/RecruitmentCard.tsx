@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { getUser } from './Navbar';
 
 export interface RecruitmentCardData {
   id: string;
@@ -21,6 +22,9 @@ const roleConfig: Record<string, { label: string; bg: string; text: string }> = 
 };
 
 function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
+  const navigate = useNavigate();
+  const currentUser = getUser();
+
   const avatarBg = avatarColors[card.nickname.charCodeAt(0) % avatarColors.length];
   const role = roleConfig[card.role] || roleConfig.interviewee;
 
@@ -33,6 +37,15 @@ function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
   const truncateBio = (bio: string, maxLen = 100): string => {
     if (!bio) return '';
     return bio.length > maxLen ? bio.slice(0, maxLen) + '...' : bio;
+  };
+
+  const handleBook = () => {
+    const target = `/user/${card.user_id}`;
+    if (!currentUser) {
+      navigate(`/login?redirect=${encodeURIComponent(target)}`);
+    } else {
+      navigate(target);
+    }
   };
 
   return (
@@ -128,14 +141,14 @@ function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
       )}
 
       {/* ── CTA Button ── */}
-      <Link
-        to={`/user/${card.user_id}`}
+      <button
+        onClick={handleBook}
         className="mt-4 inline-flex items-center justify-center w-full px-4 py-2
                    rounded-lg bg-brand-600 text-white text-sm font-medium
-                   hover:bg-brand-700 transition no-underline cursor-pointer"
+                   hover:bg-brand-700 transition cursor-pointer border-none"
       >
         预约ta
-      </Link>
+      </button>
     </div>
   );
 }
