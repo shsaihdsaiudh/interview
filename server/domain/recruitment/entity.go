@@ -18,6 +18,8 @@ const (
 type RecruitmentCard struct {
 	ID              string
 	UserID          string
+	Nickname        string   // 从 users 表 JOIN 获取，非 persistence 字段
+	Avatar          string   // 从 users 表 JOIN 获取，非 persistence 字段
 	Skills          []string
 	TargetCompanies []string
 	Role            string // interviewee / interviewer / both
@@ -51,6 +53,8 @@ func (c *RecruitmentCard) CanBeManagedBy(userID string) bool {
 type CardResponse struct {
 	ID              string    `json:"id"`
 	UserID          string    `json:"user_id"`
+	Nickname        string    `json:"nickname"`
+	Avatar          string    `json:"avatar"`
 	Skills          []string  `json:"skills"`
 	TargetCompanies []string  `json:"target_companies"`
 	Role            string    `json:"role"`
@@ -66,6 +70,8 @@ func (c *RecruitmentCard) ToResponse() CardResponse {
 	return CardResponse{
 		ID:              c.ID,
 		UserID:          c.UserID,
+		Nickname:        c.Nickname,
+		Avatar:          c.Avatar,
 		Skills:          safeSlice(c.Skills),
 		TargetCompanies: safeSlice(c.TargetCompanies),
 		Role:            c.Role,

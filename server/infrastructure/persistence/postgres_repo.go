@@ -404,11 +404,16 @@ func (r *PostgresRepo) Upsert(card *recruitment.RecruitmentCard) error {
 func (r *PostgresRepo) FindByUserID(userID string) (*recruitment.RecruitmentCard, error) {
 	card := &recruitment.RecruitmentCard{}
 	err := r.pool.QueryRow(context.Background(),
-		`SELECT id, user_id, skills, target_companies, role,
-		        experience_years, bio, is_active, created_at, updated_at
-		 FROM recruitment_cards WHERE user_id = $1`, userID,
+		`SELECT rc.id, rc.user_id, u.nickname, u.avatar,
+		        rc.skills, rc.target_companies, rc.role,
+		        rc.experience_years, rc.bio, rc.is_active,
+		        rc.created_at, rc.updated_at
+		 FROM recruitment_cards rc
+		 LEFT JOIN users u ON rc.user_id = u.email
+		 WHERE rc.user_id = $1`, userID,
 	).Scan(
-		&card.ID, &card.UserID, &card.Skills, &card.TargetCompanies,
+		&card.ID, &card.UserID, &card.Nickname, &card.Avatar,
+		&card.Skills, &card.TargetCompanies,
 		&card.Role, &card.ExperienceYears, &card.Bio, &card.IsActive,
 		&card.CreatedAt, &card.UpdatedAt,
 	)
@@ -459,7 +464,7 @@ func (r *PostgresRepo) List(filter recruitment.ListCardsFilter) ([]*recruitment.
 
 	// 查询总数
 	var total int
-	countSQL := "SELECT COUNT(*) FROM recruitment_cards " + whereClause
+	countSQL := "SELECT COUNT(*) FROM recruitment_cards rc " + whereClause
 	if err := r.pool.QueryRow(context.Background(), countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -485,10 +490,14 @@ func (r *PostgresRepo) List(filter recruitment.ListCardsFilter) ([]*recruitment.
 	dataArgs = append(dataArgs, size, offset)
 
 	dataSQL := fmt.Sprintf(
-		`SELECT id, user_id, skills, target_companies, role,
-		        experience_years, bio, is_active, created_at, updated_at
-		 FROM recruitment_cards %s
-		 ORDER BY updated_at DESC
+		`SELECT rc.id, rc.user_id, u.nickname, u.avatar,
+		        rc.skills, rc.target_companies, rc.role,
+		        rc.experience_years, rc.bio, rc.is_active,
+		        rc.created_at, rc.updated_at
+		 FROM recruitment_cards rc
+		 LEFT JOIN users u ON rc.user_id = u.email
+		 %s
+		 ORDER BY rc.updated_at DESC
 		 LIMIT $%d OFFSET $%d`,
 		whereClause, argIdx, argIdx+1,
 	)
@@ -503,7 +512,8 @@ func (r *PostgresRepo) List(filter recruitment.ListCardsFilter) ([]*recruitment.
 	for rows.Next() {
 		card := &recruitment.RecruitmentCard{}
 		if err := rows.Scan(
-			&card.ID, &card.UserID, &card.Skills, &card.TargetCompanies,
+			&card.ID, &card.UserID, &card.Nickname, &card.Avatar,
+			&card.Skills, &card.TargetCompanies,
 			&card.Role, &card.ExperienceYears, &card.Bio, &card.IsActive,
 			&card.CreatedAt, &card.UpdatedAt,
 		); err != nil {

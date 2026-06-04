@@ -78,6 +78,8 @@ func TestRecruitmentCard_ToResponse(t *testing.T) {
 	c := &RecruitmentCard{
 		ID:              "card-1",
 		UserID:          "alice@std.uestc.edu.cn",
+		Nickname:        "Alice",
+		Avatar:          "https://example.com/avatar.png",
 		Skills:          []string{"React", "TypeScript"},
 		TargetCompanies: []string{"字节", "腾讯"},
 		Role:            RoleBoth,
@@ -94,6 +96,12 @@ func TestRecruitmentCard_ToResponse(t *testing.T) {
 	}
 	if r.UserID != "alice@std.uestc.edu.cn" {
 		t.Errorf("UserID = %q", r.UserID)
+	}
+	if r.Nickname != "Alice" {
+		t.Errorf("Nickname = %q", r.Nickname)
+	}
+	if r.Avatar != "https://example.com/avatar.png" {
+		t.Errorf("Avatar = %q", r.Avatar)
 	}
 	if len(r.Skills) != 2 {
 		t.Errorf("Skills len = %d", len(r.Skills))

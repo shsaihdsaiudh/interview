@@ -25,7 +25,11 @@ function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
   const navigate = useNavigate();
   const currentUser = getUser();
 
-  const avatarBg = avatarColors[card.nickname.charCodeAt(0) % avatarColors.length];
+  // ── 防御：后端未 JOIN users 时 nickname/avatar 可能为空 ──
+  const displayName = card.nickname || (card.user_id ? card.user_id.substring(0, 8) : '?');
+  const firstChar = displayName.charAt(0);
+
+  const avatarBg = avatarColors[firstChar.charCodeAt(0) % avatarColors.length];
   const role = roleConfig[card.role] || roleConfig.interviewee;
 
   const visibleSkills = card.skills?.slice(0, 3) || [];
@@ -59,7 +63,7 @@ function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
         {card.avatar ? (
           <img
             src={card.avatar}
-            alt={card.nickname}
+            alt={displayName}
             className="w-11 h-11 rounded-full object-cover flex-shrink-0"
           />
         ) : (
@@ -67,12 +71,12 @@ function RecruitmentCard({ card }: { card: RecruitmentCardData }) {
             className="w-11 h-11 rounded-full flex items-center justify-center text-white text-base font-bold flex-shrink-0"
             style={{ background: avatarBg }}
           >
-            {card.nickname.charAt(0)}
+            {firstChar}
           </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-text text-sm truncate">
-            {card.nickname}
+            {displayName}
           </div>
           <span
             className={`inline-block mt-0.5 px-2 py-0.5 rounded-md text-xs font-medium ${role.bg} ${role.text}`}
