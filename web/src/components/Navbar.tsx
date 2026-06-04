@@ -62,11 +62,12 @@ function Navbar() {
   const navLink = (path: string, label: string) => (
     <Link
       to={path}
-      className={`text-sm font-medium transition-colors no-underline px-3 py-1.5 rounded-md ${
+      className={`no-underline px-3 py-1 transition-colors ${
         isActive(path)
-          ? 'text-brand-700 bg-brand-50'
-          : 'text-text-secondary hover:text-text'
+          ? 'text-brand-600'
+          : 'text-text-muted hover:text-text-secondary'
       }`}
+      style={{ fontSize: 18 }}
     >
       {label}
     </Link>
@@ -77,34 +78,43 @@ function Navbar() {
       className={`sticky top-0 z-50 transition ${
         scrolled
           ? 'glass border-b border-border'
-          : 'bg-white border-b border-transparent'
+          : 'bg-transparent border-b border-transparent'
       }`}
     >
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 no-underline">
-          <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+        <Link to="/" className="flex items-center gap-2.5 no-underline">
+          <div
+            className="grid gap-px flex-shrink-0"
+            style={{ gridTemplateColumns: '5px 5px', width: 12, height: 12 }}
+          >
+            <span style={{ display: 'block', background: 'var(--color-brand-600)' }} />
+            <span style={{ display: 'block', background: 'var(--color-brand-600)', opacity: 0.6 }} />
+            <span style={{ display: 'block', background: 'var(--color-brand-600)', opacity: 0.6 }} />
+            <span style={{ display: 'block', background: 'var(--color-brand-600)', opacity: 0.3 }} />
           </div>
-          <span className="text-sm font-bold text-text">面试互助平台</span>
+          <span className="text-text-secondary tracking-wide" style={{ fontSize: 18 }}>
+            mock·io
+          </span>
         </Link>
 
         <div className="flex items-center gap-1">
           {user ? (
             <>
-              {navLink('/find', '找人')}
+              {navLink('/find', '发现')}
               {navLink('/appointments', '预约')}
-              {navLink('/my-card', '我的名片')}
+              {navLink('/my-card', '名片')}
 
               <span className="w-px h-4 bg-border mx-2" />
 
               <Link
                 to={`/user/${user.email}`}
-                className="text-sm font-medium text-text flex items-center gap-1.5 no-underline hover:text-brand-600 transition"
+                className="no-underline text-text flex items-center gap-1.5 hover:text-brand-600 transition-colors"
+                style={{ fontSize: 18 }}
               >
-                <span className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center text-white text-xs font-bold">
+                <span
+                  className="w-6 h-6 flex items-center justify-center text-white font-bold"
+                  style={{ background: 'var(--color-brand-600)', fontSize: 14 }}
+                >
                   {user.nickname.charAt(0)}
                 </span>
                 <span className="hidden sm:inline">{user.nickname}</span>
@@ -112,7 +122,8 @@ function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="text-sm text-text-muted hover:text-danger transition px-2 py-1 rounded-md cursor-pointer border-none bg-transparent font-medium"
+                className="cursor-pointer border-none bg-transparent text-text-muted hover:text-danger transition-colors px-2 py-1"
+                style={{ fontSize: 18 }}
               >
                 退出
               </button>
@@ -121,15 +132,17 @@ function Navbar() {
             <div className="flex items-center gap-2">
               <Link
                 to="/login"
-                className="text-sm font-medium text-text-secondary hover:text-text transition no-underline px-3 py-1.5"
+                className="no-underline text-text-muted hover:text-text-secondary transition-colors px-3 py-1.5"
+                style={{ fontSize: 18 }}
               >
-                登录
+                sign in
               </Link>
               <Link
                 to="/register"
-                className="text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 transition no-underline px-4 py-1.5 rounded-lg"
+                className="no-underline text-white px-4 py-1.5 transition pixel-corners-sm"
+                style={{ fontSize: 16, background: 'var(--color-brand-600)' }}
               >
-                注册
+                sign up
               </Link>
             </div>
           )}

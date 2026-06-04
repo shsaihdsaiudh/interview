@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四种设计风格预览</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #e5e5e5; font-family: system-ui, sans-serif; padding: 24px; }
+  h2.preview-title { text-align: center; font-size: 14px; color: #666; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 24px; max-width: 1400px; margin: 0 auto; height: calc(100vh - 120px); }
+  .preview { border-radius: 0; overflow: hidden; display: flex; flex-direction: column; position: relative; }
+
+  /* 🏷 标签 */
+  .preview::before {
+    content: attr(data-label);
+    position: absolute; top: 12px; right: 12px; z-index: 10;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 2px;
+  }
+
+  /* ═══════════════════════════════════════
+     A · NEO-BRUTALISM · 新粗野主义
+     ═══════════════════════════════════════ */
+  .preview-a {
+    background: #fff;
+    border: 3px solid #000;
+    box-shadow: 8px 8px 0 #000;
+    font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+    color: #000;
+  }
+  .preview-a::before { content: 'A · NEO-BRUTALISM 新粗野'; background: #ff0; color: #000; border: 2px solid #000; }
+
+  .preview-a .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 3px solid #000; background: #fff; }
+  .preview-a .nav-logo { font-size: 18px; font-weight: 900; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+  .preview-a .nav-logo span { background: #ff0; padding: 4px 8px; border: 2px solid #000; }
+  .preview-a .nav-links { display: flex; gap: 4px; }
+  .preview-a .nav-links a { padding: 6px 14px; border: 2px solid #000; font-size: 12px; font-weight: 700; text-decoration: none; color: #000; background: #fff; }
+  .preview-a .nav-links a.primary { background: #000; color: #fff; }
+  .preview-a .nav-links a:hover { background: #ff0; color: #000; }
+
+  .preview-a .main { flex: 1; padding: 24px; display: flex; flex-direction: column; justify-content: center; }
+  .preview-a .hero h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; }
+  .preview-a .hero h1 em { font-style: normal; background: #ff0; padding: 0 8px; display: inline-block; border: 2px solid #000; }
+  .preview-a .hero p { font-size: 14px; color: #555; margin-top: 12px; max-width: 420px; line-height: 1.6; }
+  .preview-a .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .preview-a .btn { padding: 10px 22px; font-size: 13px; font-weight: 700; cursor: pointer; border: 2px solid #000; background: #fff; color: #000; font-family: inherit; }
+  .preview-a .btn:hover { background: #000; color: #fff; }
+  .preview-a .btn-accent { background: #ff4500; color: #fff; border-color: #000; }
+  .preview-a .btn-accent:hover { background: #000; color: #ff4500; }
+  .preview-a .card-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 20px; }
+  .preview-a .card { border: 2px solid #000; padding: 16px; background: #fff; box-shadow: 4px 4px 0 #000; }
+  .preview-a .card h3 { font-size: 14px; font-weight: 900; margin-bottom: 4px; }
+  .preview-a .card p { font-size: 11px; color: #555; line-height: 1.5; }
+  .preview-a .tag { display: inline-block; padding: 3px 8px; border: 1.5px solid #000; font-size: 10px; font-weight: 700; margin: 2px; background: #ff0; }
+
+  /* ═══════════════════════════════════════
+     B · DARK TERMINAL · 暗黑终端
+     ═══════════════════════════════════════ */
+  .preview-b {
+    background: #0d1117;
+    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+  }
+  .preview-b::before { content: 'B · DARK INDUSTRIAL 暗黑终端'; background: #1a1f25; color: #58a6ff; border: 1px solid #30363d; }
+
+  .preview-b .nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid #30363d; background: #161b22; }
+  .preview-b .nav-logo { font-size: 13px; font-weight: 700; color: #58a6ff; display: flex; align-items: center; gap: 8px; }
+  .preview-b .nav-logo::before { content: '>_'; color: #3fb950; }
+  .preview-b .nav-links { display: flex; gap: 16px; }
+  .preview-b .nav-links a { font-size: 11px; text-decoration: none; color: #8b949e; font-weight: 500; }
+  .preview-b .nav-links a:hover { color: #58a6ff; }
+  .preview-b .nav-links a.primary { color: #3fb950; }
+
+  .preview-b .main { flex: 1; padding: 24px; display: flex; flex-direction: column; justify-content: center; }
+  .preview-b .status-line { font-size: 11px; color: #8b949e; margin-bottom: 16px; }
+  .preview-b .status-line .dot { display: inline-block; width: 6px; height: 6px; background: #3fb950; margin-right: 6px; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+  .preview-b .hero h1 { font-size: clamp(24px, 3.5vw, 36px); font-weight: 700; line-height: 1.2; color: #f0f6fc; }
+  .preview-b .hero h1 em { font-style: normal; color: #58a6ff; }
+  .preview-b .hero p { font-size: 12px; color: #8b949e; margin-top: 10px; max-width: 400px; line-height: 1.7; border-left: 2px solid #30363d; padding-left: 12px; }
+  .preview-b .actions { display: flex; gap: 10px; margin-top: 18px; }
+  .preview-b .btn { padding: 8px 18px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid #30363d; background: #21262d; color: #c9d1d9; font-family: inherit; border-radius: 4px; }
+  .preview-b .btn:hover { background: #30363d; border-color: #58a6ff; }
+  .preview-b .btn-accent { background: #238636; border-color: #238636; color: #fff; }
+  .preview-b .btn-accent:hover { background: #2ea043; border-color: #2ea043; }
+  .preview-b .card-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 18px; }
+  .preview-b .card { border: 1px solid #30363d; padding: 14px; background: #161b22; border-radius: 4px; }
+  .preview-b .card h3 { font-size: 12px; font-weight: 700; color: #58a6ff; margin-bottom: 4px; }
+  .preview-b .card p { font-size: 10px; color: #8b949e; line-height: 1.6; }
+  .preview-b .tag { display: inline-block; padding: 2px 6px; border: 1px solid #30363d; font-size: 9px; color: #58a6ff; margin: 2px; border-radius: 2px; background: #0d1117; }
+
+  /* ═══════════════════════════════════════
+     C · GLITCH EDITORIAL · 故障杂志
+     ═══════════════════════════════════════ */
+  .preview-c {
+    background: #f8f5f0;
+    font-family: 'Noto Sans SC', sans-serif;
+    color: #1a1a1a;
+    border: 1px solid #d0cbc3;
+    overflow: hidden;
+  }
+  .preview-c::before { content: 'C · GLITCH EDITORIAL 故障杂志'; background: #1a1a1a; color: #ff2d95; border: 1px solid #1a1a1a; }
+
+  .preview-c .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid #d0cbc3; background: #fff; }
+  .preview-c .nav-logo { font-size: 20px; font-weight: 900; font-family: 'Noto Serif SC', serif; letter-spacing: -0.02em; position: relative; }
+  .preview-c .nav-logo::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px; background: #ff2d95; transform: scaleX(0.6); }
+  .preview-c .nav-links { display: flex; gap: 2px; }
+  .preview-c .nav-links a { padding: 6px 16px; font-size: 12px; font-weight: 600; text-decoration: none; color: #666; position: relative; }
+  .preview-c .nav-links a:hover { color: #000; }
+  .preview-c .nav-links a.primary { color: #ff2d95; }
+
+  .preview-c .main { flex: 1; padding: 28px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+  /* 故障偏移层 */
+  .preview-c .main::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,45,149,0.03) 2px, rgba(255,45,149,0.03) 4px); pointer-events: none; }
+  .preview-c .hero { position: relative; }
+  .preview-c .hero h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 900; line-height: 0.95; letter-spacing: -0.04em; font-family: 'Noto Serif SC', 'Noto Sans SC', serif; }
+  .preview-c .hero h1 .glitch { position: relative; display: inline-block; }
+  .preview-c .hero h1 .glitch::before,
+  .preview-c .hero h1 .glitch::after { content: attr(data-text); position: absolute; inset: 0; }
+  .preview-c .hero h1 .glitch::before { color: #00e5ff; z-index: -1; transform: translate(-2px, 1px); opacity: 0.7; }
+  .preview-c .hero h1 .glitch::after { color: #ff2d95; z-index: -2; transform: translate(2px, -1px); opacity: 0.7; }
+  .preview-c .hero h1 em { font-style: normal; color: #ff2d95; }
+  .preview-c .hero p { font-size: 13px; color: #555; margin-top: 14px; max-width: 380px; line-height: 1.7; border-top: 3px solid #000; padding-top: 14px; }
+  .preview-c .actions { display: flex; gap: 12px; margin-top: 20px; }
+  .preview-c .btn { padding: 10px 26px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; background: #1a1a1a; color: #fff; font-family: inherit; position: relative; overflow: hidden; }
+  .preview-c .btn::after { content: ''; position: absolute; inset: -2px; background: #ff2d95; z-index: -1; transform: translate(3px, 3px); transition: transform 0.15s; }
+  .preview-c .btn:hover::after { transform: translate(0, 0); }
+  .preview-c .btn-accent { background: #ff2d95; }
+  .preview-c .btn-accent::after { background: #00e5ff; }
+  .preview-c .card-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 22px; }
+  .preview-c .card { border: 1px solid #d0cbc3; padding: 16px; background: #fff; position: relative; }
+  .preview-c .card::before { content: ''; position: absolute; top: -2px; left: -2px; width: 12px; height: 2px; background: #ff2d95; }
+  .preview-c .card h3 { font-size: 14px; font-weight: 800; margin-bottom: 4px; font-family: 'Noto Serif SC', serif; }
+  .preview-c .card p { font-size: 11px; color: #666; line-height: 1.6; }
+  .preview-c .tag { display: inline-block; padding: 3px 8px; font-size: 10px; font-weight: 700; margin: 2px; background: rgba(255,45,149,0.1); color: #ff2d95; }
+
+  /* ═══════════════════════════════════════
+     D · DARK LUXE · 暗黑精奢
+     ═══════════════════════════════════════ */
+  .preview-d {
+    background: #0a0a0b;
+    font-family: 'Noto Sans SC', sans-serif;
+    color: #e0ddd8;
+    border: 1px solid #2a2825;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(196, 164, 110, 0.04) 0%, transparent 60%);
+  }
+  .preview-d::before { content: 'D · DARK LUXE 暗黑精奢'; background: #1a1816; color: #c4a46e; border: 1px solid #2a2825; }
+
+  .preview-d .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(10,10,11,0.95); backdrop-filter: blur(12px); }
+  .preview-d .nav-logo { font-size: 16px; font-weight: 600; font-family: 'Noto Serif SC', serif; color: #c4a46e; letter-spacing: 0.04em; display: flex; align-items: center; gap: 8px; }
+  .preview-d .nav-logo .mark { width: 6px; height: 6px; background: #c4a46e; transform: rotate(45deg); }
+  .preview-d .nav-links { display: flex; gap: 20px; }
+  .preview-d .nav-links a { font-size: 11px; text-decoration: none; color: #787670; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+  .preview-d .nav-links a:hover { color: #c4a46e; }
+  .preview-d .nav-links a.primary { color: #c4a46e; }
+
+  .preview-d .main { flex: 1; padding: 28px; display: flex; flex-direction: column; justify-content: center; }
+  .preview-d .hero h1 { font-size: clamp(28px, 4vw, 42px); font-weight: 200; line-height: 1.1; letter-spacing: 0.03em; font-family: 'Noto Serif SC', serif; color: #f5f0e8; }
+  .preview-d .hero h1 em { font-style: normal; color: #c4a46e; font-weight: 400; }
+  .preview-d .hero h1 strong { font-weight: 600; display: block; font-size: 0.4em; letter-spacing: 0.15em; text-transform: uppercase; color: #787670; margin-bottom: 8px; }
+  .preview-d .hero p { font-size: 12px; color: #787670; margin-top: 14px; max-width: 360px; line-height: 1.9; font-weight: 300; }
+  .preview-d .actions { display: flex; gap: 14px; margin-top: 24px; }
+  .preview-d .btn { padding: 10px 24px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid rgba(196,164,110,0.3); background: transparent; color: #c4a46e; font-family: inherit; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.3s; }
+  .preview-d .btn:hover { background: rgba(196,164,110,0.08); border-color: #c4a46e; }
+  .preview-d .btn-accent { background: linear-gradient(135deg, #c4a46e, #a68b5a); border-color: transparent; color: #0a0a0b; font-weight: 600; }
+  .preview-d .btn-accent:hover { opacity: 0.9; }
+  .preview-d .card-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 22px; }
+  .preview-d .card { border: 1px solid rgba(255,255,255,0.05); padding: 18px; background: rgba(255,255,255,0.02); }
+  .preview-d .card:hover { border-color: rgba(196,164,110,0.2); }
+  .preview-d .card h3 { font-size: 13px; font-weight: 500; color: #c4a46e; margin-bottom: 6px; font-family: 'Noto Serif SC', serif; }
+  .preview-d .card p { font-size: 11px; color: #787670; line-height: 1.7; font-weight: 300; }
+  .preview-d .tag { display: inline-block; padding: 3px 8px; font-size: 9px; font-weight: 500; margin: 2px; border: 1px solid rgba(196,164,110,0.2); color: #c4a46e; letter-spacing: 0.06em; }
+
+  /* ── 响应式 ── */
+  @media (max-width: 1024px) {
+    .preview-grid { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+    .preview { min-height: 450px; }
+  }
+</style>
+</head>
+<body>
+
+<h2 class="preview-title">四种设计风格对比 — 同样内容 · 不同灵魂</h2>
+
+<div class="preview-grid">
+
+  <!-- A: NEO-BRUTALISM -->
+  <div class="preview preview-a" data-label="A · 新粗野主义">
+    <div class="nav">
+      <div class="nav-logo"><span>面</span> INTERVIEW</div>
+      <div class="nav-links">
+        <a href="#">发现</a>
+        <a href="#">预约</a>
+        <a href="#" class="primary">注册</a>
+      </div>
+    </div>
+    <div class="main">
+      <div class="hero">
+        <h1>和同学一起<br><em>练习面试</em></h1>
+        <p>找到志同道合的同学，进行一对一模拟面试。真实的对话、真实的反馈、真实的成长。</p>
+        <div class="actions">
+          <button class="btn btn-accent">⚡ 立即开始</button>
+          <button class="btn">了解更多 →</button>
+        </div>
+      </div>
+      <div class="card-row">
+        <div class="card"><h3>发现伙伴</h3><p>按技能/公司筛选</p><span class="tag">React</span><span class="tag">Go</span></div>
+        <div class="card"><h3>面试间</h3><p>管理预约时段</p><span class="tag">可预约</span></div>
+        <div class="card"><h3>社区</h3><p>分享面经讨论</p><span class="tag">New</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: DARK TERMINAL -->
+  <div class="preview preview-b" data-label="B · 暗黑终端">
+    <div class="nav">
+      <div class="nav-logo">mock-interview</div>
+      <div class="nav-links">
+        <a href="#">/find</a>
+        <a href="#">/slots</a>
+        <a href="#" class="primary">$ register</a>
+      </div>
+    </div>
+    <div class="main">
+      <div class="status-line"><span class="dot"></span> system.online · 142 peers active · uptime 99.9%</div>
+      <div class="hero">
+        <h1>find <em>peers</em><br>practice <em>interviews</em></h1>
+        <p>// 匹配同学 → 模拟面试 → 双向反馈<br>// real对话中积累经验，反馈中成长</p>
+        <div class="actions">
+          <button class="btn btn-accent">$ ./start-session --now</button>
+          <button class="btn">$ man discover</button>
+        </div>
+      </div>
+      <div class="card-row">
+        <div class="card"><h3>scan_peers</h3><p>按技能栈匹配面试搭档</p><span class="tag">react</span><span class="tag">golang</span></div>
+        <div class="card"><h3>open_slots</h3><p>发布可用时间段</p><span class="tag">available</span></div>
+        <div class="card"><h3>community</h3><p>分享面试经验</p><span class="tag">wiki</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: GLITCH EDITORIAL -->
+  <div class="preview preview-c" data-label="C · 故障杂志">
+    <div class="nav">
+      <div class="nav-logo">面试志</div>
+      <div class="nav-links">
+        <a href="#">发现</a>
+        <a href="#">预约</a>
+        <a href="#" class="primary">加入</a>
+      </div>
+    </div>
+    <div class="main">
+      <div class="hero">
+        <h1><span class="glitch" data-text="模拟面试">模拟面试</span><br><em>找到你的</em><br>最佳搭档</h1>
+        <p>打破独自练习的围墙。在一对一的真实对话中，找到节奏、积累信心、共同进化。</p>
+        <div class="actions">
+          <button class="btn btn-accent">开始匹配</button>
+          <button class="btn">浏览社区</button>
+        </div>
+      </div>
+      <div class="card-row">
+        <div class="card"><h3>发现人才</h3><p>按技能和公司精确筛选</p><span class="tag">React</span><span class="tag">系统设计</span></div>
+        <div class="card"><h3>时间管理</h3><p>发布你的空闲时段</p><span class="tag">本周可约</span></div>
+        <div class="card"><h3>经验分享</h3><p>面经讨论社区</p><span class="tag">热门</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D: DARK LUXE -->
+  <div class="preview preview-d" data-label="D · 暗黑精奢">
+    <div class="nav">
+      <div class="nav-logo"><span class="mark"></span> INTERVIEW</div>
+      <div class="nav-links">
+        <a href="#">Discover</a>
+        <a href="#">Slots</a>
+        <a href="#" class="primary">Join</a>
+      </div>
+    </div>
+    <div class="main">
+      <div class="hero">
+        <h1><strong>Elite Practice</strong>与优秀的人<br>一起<em>模拟面试</em></h1>
+        <p>精心匹配的面试练习——在真实的对话中积累经验，在彼此的反馈中持续精进。</p>
+        <div class="actions">
+          <button class="btn btn-accent">开始练习</button>
+          <button class="btn">了解更多</button>
+        </div>
+      </div>
+      <div class="card-row">
+        <div class="card"><h3>Discover Peers</h3><p>按技能与公司筛选匹配</p><span class="tag">React</span><span class="tag">System Design</span></div>
+        <div class="card"><h3>Time Slots</h3><p>发布可预约时段</p><span class="tag">Available</span></div>
+        <div class="card"><h3>Community</h3><p>面试经验与讨论</p><span class="tag">Trending</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>像素风格预览 — 面试互助平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pixel: 4px;
+    --bg: #1a1a2e;
+    --bg-card: #16213e;
+    --text: #e0e0e0;
+    --text-dim: #8a8aaa;
+    --accent: #48f0a0;
+    --accent-dim: #2a8058;
+    --warn: #f0c040;
+    --danger: #f04848;
+    --border: #3a3a5e;
+    --scanline: rgba(0,0,0,0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 18px;
+    line-height: 1.5;
+    min-height: 100vh;
+    /* CRT 扫描线 */
+    background-image:
+      repeating-linear-gradient(0deg, var(--scanline) 0px, transparent 2px, var(--scanline) 4px),
+      radial-gradient(ellipse at center, rgba(26,26,46,0) 0%, rgba(26,26,46,0.4) 100%);
+    image-rendering: pixelated;
+  }
+
+  /* ── 扫描线动画 ── */
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.03;
+    background: repeating-linear-gradient(0deg, #000 0px, transparent 1px, #000 2px);
+  }
+
+  /* ═══════════════════════════════════════
+     像素化工具
+     ═══════════════════════════════════════ */
+
+  /* 像素边框 - 4px 阶梯角 */
+  .pixel-border {
+    border: 4px solid var(--border);
+    position: relative;
+    clip-path: polygon(
+      0px 4px, 4px 4px, 4px 0px, calc(100% - 4px) 0px, calc(100% - 4px) 4px,
+      100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
+      calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px),
+      0px calc(100% - 4px)
+    );
+  }
+
+  /* 像素按钮 */
+  .pixel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    font-family: 'Press Start 2P', 'VT323', monospace;
+    font-size: 10px;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    position: relative;
+    color: var(--bg);
+    background: var(--accent);
+    clip-path: polygon(
+      4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px),
+      calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px
+    );
+    transition: transform 0.1s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .pixel-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 rgba(72,240,160,0.3);
+  }
+  .pixel-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+
+  .pixel-btn.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 3px solid var(--accent);
+  }
+  .pixel-btn.ghost:hover {
+    background: rgba(72,240,160,0.1);
+  }
+
+  /* 像素卡片 */
+  .pixel-card {
+    background: var(--bg-card);
+    border: 3px solid var(--border);
+    padding: 20px;
+    position: relative;
+    clip-path: polygon(
+      0 6px, 6px 6px, 6px 0, calc(100% - 6px) 0, calc(100% - 6px) 6px,
+      100% 6px, 100% calc(100% - 6px), calc(100% - 6px) calc(100% - 6px),
+      calc(100% - 6px) 100%, 6px 100%, 6px calc(100% - 6px), 0 calc(100% - 6px)
+    );
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .pixel-card:hover {
+    border-color: var(--accent-dim);
+    transform: translateY(-2px);
+  }
+
+  /* 像素标签 */
+  .pixel-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    background: rgba(72,240,160,0.12);
+    color: var(--accent);
+    margin: 2px;
+    clip-path: polygon(2px 0, calc(100% - 2px) 0, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 0 calc(100% - 2px), 0 2px);
+    text-transform: uppercase;
+  }
+
+  /* 像素输入框 */
+  .pixel-input {
+    padding: 10px 14px;
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 16px;
+    background: var(--bg);
+    border: 3px solid var(--border);
+    color: var(--text);
+    outline: none;
+    clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  }
+  .pixel-input:focus { border-color: var(--accent); }
+
+  /* ═══════════════════════════════════════
+     布局
+     ═══════════════════════════════════════ */
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── 导航栏 ── */
+  .navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(26,26,46,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  .nav-logo .icon {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    width: 20px;
+    height: 20px;
+  }
+  .nav-logo .icon span {
+    display: block;
+    background: var(--accent);
+  }
+  .nav-logo .icon span:nth-child(2) { opacity: 0.6; }
+  .nav-logo .icon span:nth-child(3) { opacity: 0.6; }
+  .nav-logo .icon span:nth-child(4) { opacity: 0.3; }
+
+  .nav-links { display: flex; gap: 24px; align-items: center; }
+  .nav-links a {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--accent); }
+  .nav-links a.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+  /* ── Hero ── */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+    padding: 60px 0;
+    position: relative;
+  }
+  .hero-left { position: relative; z-index: 1; }
+  .hero-left .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero-left .badge .blink {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .hero-left h1 {
+    font-family: 'Press Start 2P', 'Noto Sans SC', monospace;
+    font-size: clamp(16px, 3vw, 24px);
+    line-height: 1.6;
+    color: var(--text);
+    letter-spacing: 0.02em;
+    margin-bottom: 16px;
+  }
+  .hero-left h1 .highlight {
+    color: var(--accent);
+    display: block;
+  }
+  .hero-left p {
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 20px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    max-width: 380px;
+    margin-bottom: 28px;
+  }
+  .hero-actions { display: flex; gap: 12px; }
+
+  /* 右侧像素装饰 */
+  .hero-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pixel-art {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+    width: 200px;
+    height: 200px;
+  }
+  .pixel-art span {
+    display: block;
+    border-radius: 0;
+    transition: opacity 0.3s;
+  }
+  .pixel-art span.on { background: var(--accent); }
+  .pixel-art span.dim { background: var(--accent-dim); opacity: 0.5; }
+  .pixel-art span.off { background: transparent; }
+
+  /* ── 状态栏 ── */
+  .status-bar {
+    display: flex;
+    gap: 24px;
+    padding: 12px 0;
+    border-top: 2px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+  .status-bar span { display: flex; align-items: center; gap: 6px; }
+  .status-bar .stat-val { color: var(--accent); font-size: 9px; }
+
+  /* ── 功能入口 ── */
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--text);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before {
+    content: '>';
+    color: var(--accent);
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .card-grid .pixel-card h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .card-grid .pixel-card p {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  /* ── 第二个场景：登录框 ── */
+  .scene-divider {
+    border: none;
+    height: 2px;
+    background: var(--border);
+    margin: 60px 0;
+    position: relative;
+  }
+  .scene-divider::after {
+    content: '* * *';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+  }
+
+  .pixel-form {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 28px;
+    background: var(--bg-card);
+    border: 4px solid var(--border);
+    clip-path: polygon(
+      0 8px, 8px 8px, 8px 0, calc(100% - 8px) 0, calc(100% - 8px) 8px,
+      100% 8px, 100% calc(100% - 8px), calc(100% - 8px) calc(100% - 8px),
+      calc(100% - 8px) 100%, 8px 100%, 8px calc(100% - 8px), 0 calc(100% - 8px)
+    );
+  }
+  .pixel-form h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+  }
+  .pixel-form .field {
+    margin-bottom: 16px;
+  }
+  .pixel-form .field label {
+    display: block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .pixel-form .field input {
+    width: 100%;
+    padding: 10px 14px;
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 18px;
+    background: var(--bg);
+    border: 3px solid var(--border);
+    color: var(--text);
+    outline: none;
+    clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
+  }
+  .pixel-form .field input:focus { border-color: var(--accent); }
+  .pixel-form .field input::placeholder { color: var(--border); }
+  .pixel-form .pixel-btn { width: 100%; justify-content: center; padding: 12px; }
+  .pixel-form .alt-link {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    text-decoration: none;
+  }
+  .pixel-form .alt-link:hover { color: var(--accent); }
+
+  /* ── 页脚 ── */
+  .footer {
+    text-align: center;
+    padding: 32px 0;
+    border-top: 2px solid var(--border);
+    margin-top: 60px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .footer span { color: var(--accent); }
+
+  /* ── 响应式 ── */
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; gap: 32px; }
+    .hero-right { order: -1; }
+    .pixel-art { width: 120px; height: 120px; }
+    .card-grid { grid-template-columns: 1fr; }
+    .nav-links { gap: 12px; }
+    .nav-links a { font-size: 7px; }
+  }
+
+  /* ── 光标闪烁效果 ── */
+  .cursor::after {
+    content: '_';
+    display: inline;
+    color: var(--accent);
+    animation: blink 1s steps(2) infinite;
+  }
+
+  /* ── 像素滚动条 ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); border-left: 1px solid var(--border); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div class="container">
+
+  <!-- ═══════ 导航栏 ═══════ -->
+  <nav class="navbar">
+    <a href="#" class="nav-logo">
+      <div class="icon">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      MOCK·IO
+    </a>
+    <div class="nav-links">
+      <a href="#" class="active">FIND</a>
+      <a href="#">SLOTS</a>
+      <a href="#">CARD</a>
+      <a href="#">FEED</a>
+      <a href="#" class="pixel-btn ghost" style="font-size:7px;padding:6px 12px;">SIGN IN</a>
+    </div>
+  </nav>
+
+  <!-- ═══════ Hero ═══════ -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="badge">
+        <span class="blink"></span>
+        SYSTEM ONLINE · 1,284 PEERS
+      </div>
+      <h1>
+        和同学一起
+        <span class="highlight">练习面试→</span>
+      </h1>
+      <p>
+        找到志同道合的伙伴，进行一对一模拟面试。<br>
+        真实对话中积累经验，反馈中共同成长。
+      </p>
+      <div class="hero-actions">
+        <a href="#" class="pixel-btn">▶ START QUEST</a>
+        <a href="#" class="pixel-btn ghost">? HELP</a>
+      </div>
+    </div>
+
+    <!-- 8×8 像素画：对话框图标 -->
+    <div class="hero-right">
+      <div class="pixel-art">
+        <span></span><span></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span>
+        <span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span>
+        <span class="on"></span><span></span><span class="dim"></span><span class="dim"></span><span class="dim"></span><span class="dim"></span><span></span><span class="on"></span>
+        <span class="on"></span><span></span><span class="dim"></span><span class="on"></span><span class="dim"></span><span class="dim"></span><span></span><span class="on"></span>
+        <span class="on"></span><span></span><span class="dim"></span><span class="dim"></span><span class="dim"></span><span class="dim"></span><span></span><span class="on"></span>
+        <span class="on"></span><span></span><span class="dim"></span><span class="dim"></span><span class="on"></span><span class="dim"></span><span></span><span class="on"></span>
+        <span></span><span class="on"></span><span></span><span></span><span></span><span></span><span class="on"></span><span></span>
+        <span></span><span></span><span class="on"></span><span class="on"></span><span class="on"></span><span class="on"></span><span></span><span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 状态栏 ═══════ -->
+  <div class="status-bar">
+    <span>👥 ACTIVE <span class="stat-val">1,284</span></span>
+    <span>✅ COMPLETED <span class="stat-val">3,562</span></span>
+    <span>⏱ UPTIME <span class="stat-val">99.9%</span></span>
+    <span>🏷 TAGS <span class="stat-val">REACT · GO · SYS</span></span>
+  </div>
+
+  <!-- ═══════ 功能入口 ═══════ -->
+  <div class="section-title">MENU</div>
+  <div class="card-grid">
+    <div class="pixel-card">
+      <h3>[1] FIND PEERS</h3>
+      <p>按技能栈、目标公司与经验年限精确筛选面试伙伴</p>
+      <span class="pixel-tag">REACT</span><span class="pixel-tag">GO</span><span class="pixel-tag">SYS-DESIGN</span>
+    </div>
+    <div class="pixel-card">
+      <h3>[2] TIME SLOTS</h3>
+      <p>发布空闲时段，自动匹配双方的可用时间</p>
+      <span class="pixel-tag">AVAILABLE</span><span class="pixel-tag">THIS WEEK</span>
+    </div>
+    <div class="pixel-card">
+      <h3>[3] COMMUNITY</h3>
+      <p>分享面试心得，参与讨论社区，一起成长</p>
+      <span class="pixel-tag">FEED</span><span class="pixel-tag">SHARE</span>
+    </div>
+  </div>
+
+  <!-- ═══════ 场景分隔 ═══════ -->
+  <hr class="scene-divider">
+
+  <!-- ═══════ 登录框 ═══════ -->
+  <div class="pixel-form">
+    <h2>▶ SIGN IN</h2>
+    <div class="field">
+      <label>Student ID</label>
+      <input type="text" placeholder="2024010914026" value="2024010914026">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" placeholder="········" value="········">
+    </div>
+    <button class="pixel-btn" style="width:100%;justify-content:center;">LOGIN</button>
+    <a href="#" class="alt-link">NEW? CREATE ACCOUNT ></a>
+  </div>
+
+  <!-- ═══════ 页脚 ═══════ -->
+  <div class="footer">
+    <span>MOCK·IO</span> © 2026 · PRESS START TO CONTINUE
+  </div>
+
+</div>
+</body>
+</html>

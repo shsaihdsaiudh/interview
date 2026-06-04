@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>设计方向预览 V2 — 面试互助平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@300;400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&family=LXGW+WenKai:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a1a;
+    color: #fff;
+    font-family: 'DM Sans', 'Noto Sans SC', system-ui, sans-serif;
+  }
+
+  /* ── Section 通用 ── */
+  .style-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .style-container {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .style-label {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    z-index: 5;
+  }
+
+  /* ── Nav 组件复用 ── */
+  .demo-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+  }
+  .demo-nav-logo { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .demo-nav-links { display: flex; gap: 28px; align-items: center; }
+  .demo-nav-links a { font-size: 12px; text-decoration: none; font-weight: 500; transition: 0.2s; }
+  .demo-btn {
+    padding: 8px 18px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: all 0.25s;
+    display: inline-block;
+    cursor: pointer;
+    border: none;
+  }
+
+  .demo-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 32px;
+  }
+  .demo-card {
+    padding: 20px;
+    transition: all 0.3s;
+  }
+  .demo-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .demo-card p { font-size: 12px; line-height: 1.7; opacity: 0.7; }
+  .demo-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    margin: 3px 3px 3px 0;
+    border-radius: 2px;
+  }
+
+  .demo-hero { margin-bottom: 12px; }
+  .demo-hero h1 { line-height: 1.05; letter-spacing: -0.02em; }
+  .demo-hero p { margin-top: 14px; max-width: 440px; line-height: 1.7; }
+  .demo-actions { display: flex; gap: 12px; margin-top: 22px; }
+
+  /* ═══════════════════════════════════════
+     1 · LIQUID GLASS · 玻璃光晕
+     ═══════════════════════════════════════ */
+  .s1 {
+    background: #0b0b10;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 20%, rgba(99, 102, 241, 0.25) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 50% at 80% 60%, rgba(236, 72, 153, 0.2) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 40% at 50% 80%, rgba(34, 211, 238, 0.12) 0%, transparent 50%);
+  }
+  .s1 .style-label { color: rgba(255,255,255,0.5); }
+
+  .s1 .demo-nav { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .s1 .demo-nav-logo { color: #fff; }
+  .s1 .demo-nav-links a { color: rgba(255,255,255,0.55); }
+  .s1 .demo-nav-links a:hover { color: #fff; }
+
+  .s1 .demo-hero h1 {
+    font-size: clamp(44px, 6vw, 72px);
+    font-weight: 300;
+    color: #fff;
+    font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
+  }
+  .s1 .demo-hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #818cf8, #e879f9, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 600;
+  }
+  .s1 .demo-hero p { color: rgba(255,255,255,0.5); font-size: 15px; font-weight: 300; }
+
+  .s1 .demo-btn-primary {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    font-weight: 500;
+  }
+  .s1 .demo-btn-primary:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); }
+  .s1 .demo-btn-secondary { color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.08); background: transparent; }
+  .s1 .demo-btn-secondary:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+
+  .s1 .demo-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 10px;
+  }
+  .s1 .demo-card:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
+  .s1 .demo-card h3 { color: #fff; }
+  .s1 .demo-card p { color: rgba(255,255,255,0.5); }
+  .s1 .demo-tag { background: rgba(129,140,248,0.15); color: #a5b4fc; }
+
+  /* ── 浮动光点动画 ── */
+  .s1 .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: float 20s ease-in-out infinite;
+  }
+  .s1 .orb:nth-child(1) { width: 300px; height: 300px; background: rgba(99,102,241,0.3); top: -10%; left: -5%; animation-delay: 0s; }
+  .s1 .orb:nth-child(2) { width: 250px; height: 250px; background: rgba(236,72,153,0.25); top: 40%; right: -8%; animation-delay: -7s; }
+  .s1 .orb:nth-child(3) { width: 200px; height: 200px; background: rgba(34,211,238,0.2); bottom: -5%; left: 30%; animation-delay: -14s; }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -40px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+  }
+
+  /* ═══════════════════════════════════════
+     2 · KINETIC TYPOGRAPHY · 动态排版
+     ═══════════════════════════════════════ */
+  .s2 {
+    background: #faf9f6;
+    color: #171717;
+  }
+  .s2 .style-label { color: rgba(0,0,0,0.35); }
+
+  .s2 .demo-nav { border-bottom: 1px solid rgba(0,0,0,0.08); }
+  .s2 .demo-nav-logo { color: #171717; font-family: 'Playfair Display', 'Noto Serif SC', serif; }
+  .s2 .demo-nav-links a { color: rgba(0,0,0,0.45); }
+  .s2 .demo-nav-links a:hover { color: #171717; }
+
+  .s2 .demo-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+  .s2 .hero-left h1 {
+    font-size: clamp(48px, 7vw, 88px);
+    font-weight: 900;
+    font-family: 'Playfair Display', 'Noto Serif SC', serif;
+    color: #171717;
+  }
+  .s2 .hero-left h1 .accent {
+    display: block;
+    font-size: 0.45em;
+    font-weight: 400;
+    font-style: italic;
+    color: #c41e3a;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+  .s2 .hero-left p {
+    font-size: 14px;
+    color: rgba(0,0,0,0.55);
+    font-weight: 400;
+    line-height: 1.8;
+  }
+  .s2 .hero-right {
+    position: relative;
+    aspect-ratio: 3/4;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    padding: 24px;
+  }
+  .s2 .hero-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.015) 3px,
+      rgba(255,255,255,0.015) 6px
+    );
+  }
+  .s2 .hero-right .overlay-text {
+    position: relative;
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 1.6;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .s2 .hero-right .overlay-text strong {
+    display: block;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-family: 'Playfair Display', serif;
+  }
+
+  .s2 .demo-btn-primary {
+    background: #171717;
+    color: #faf9f6;
+    font-weight: 500;
+  }
+  .s2 .demo-btn-primary:hover { background: #000; }
+  .s2 .demo-btn-secondary {
+    color: rgba(0,0,0,0.6);
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.12);
+  }
+  .s2 .demo-btn-secondary:hover { color: #171717; border-color: rgba(0,0,0,0.3); }
+
+  .s2 .demo-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .s2 .demo-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: #c41e3a;
+    transform: scaleX(0);
+    transition: transform 0.4s;
+  }
+  .s2 .demo-card:hover::before { transform: scaleX(1); }
+  .s2 .demo-card:hover { box-shadow: 0 8px 40px rgba(0,0,0,0.06); }
+  .s2 .demo-card h3 { font-family: 'Playfair Display', 'Noto Serif SC', serif; color: #171717; }
+  .s2 .demo-card p { color: rgba(0,0,0,0.5); }
+  .s2 .demo-tag { background: rgba(196,30,58,0.06); color: #c41e3a; border-radius: 2px; }
+
+  @media (max-width: 768px) {
+    .s2 .demo-hero { grid-template-columns: 1fr; gap: 32px; }
+    .s2 .hero-right { aspect-ratio: 16/9; }
+  }
+
+  /* ═══════════════════════════════════════
+     3 · MATERIAL CANVAS · 材质画布
+     ═══════════════════════════════════════ */
+  .s3 {
+    background: #f3efe6;
+    color: #2d2a25;
+  }
+  .s3::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .s3 .style-label { color: rgba(0,0,0,0.3); }
+
+  .s3 .demo-nav { border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .s3 .demo-nav-logo {
+    color: #2d2a25;
+    font-family: 'LXGW WenKai', 'Noto Serif SC', serif;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+  .s3 .demo-nav-logo::before { content: ''; display: inline-block; width: 8px; height: 8px; background: #c47a2b; transform: rotate(45deg); }
+  .s3 .demo-nav-links a { color: rgba(0,0,0,0.4); }
+  .s3 .demo-nav-links a:hover { color: #2d2a25; }
+
+  .s3 .demo-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+  }
+  .s3 .demo-hero .big-num {
+    font-size: clamp(120px, 20vw, 240px);
+    font-weight: 900;
+    font-family: 'Playfair Display', 'Noto Serif SC', serif;
+    color: #e8e2d4;
+    line-height: 1;
+    position: absolute;
+    left: -20px;
+    top: -60px;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .s3 .demo-hero .content {
+    position: relative;
+    z-index: 1;
+    padding-top: 40px;
+  }
+  .s3 .demo-hero h1 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 700;
+    font-family: 'LXGW WenKai', 'Noto Serif SC', serif;
+    color: #2d2a25;
+    line-height: 1.2;
+  }
+  .s3 .demo-hero h1 em {
+    font-style: normal;
+    color: #c47a2b;
+    position: relative;
+  }
+  .s3 .demo-hero h1 em::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(196,122,43,0.3);
+    border-radius: 2px;
+  }
+  .s3 .demo-hero p {
+    font-size: 14px;
+    color: rgba(0,0,0,0.5);
+    font-weight: 400;
+    line-height: 1.8;
+    border-left: 2px solid rgba(196,122,43,0.3);
+    padding-left: 16px;
+  }
+
+  .s3 .demo-btn-primary {
+    background: #c47a2b;
+    color: #fff;
+    font-weight: 500;
+    border-radius: 2px;
+  }
+  .s3 .demo-btn-primary:hover { background: #a86520; }
+  .s3 .demo-btn-secondary {
+    color: rgba(0,0,0,0.55);
+    background: transparent;
+    border-bottom: 1.5px solid rgba(0,0,0,0.15);
+    border-radius: 0;
+    padding: 8px 4px;
+  }
+  .s3 .demo-btn-secondary:hover { color: #2d2a25; border-bottom-color: #c47a2b; }
+
+  .s3 .demo-card {
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(0,0,0,0.04);
+    border-radius: 2px;
+    backdrop-filter: blur(4px);
+  }
+  .s3 .demo-card:hover { background: rgba(255,255,255,0.9); box-shadow: 0 2px 20px rgba(0,0,0,0.04); }
+  .s3 .demo-card h3 { font-family: 'LXGW WenKai', serif; color: #2d2a25; font-size: 15px; }
+  .s3 .demo-card p { color: rgba(0,0,0,0.45); }
+  .s3 .demo-tag { background: rgba(196,122,43,0.08); color: #c47a2b; font-size: 10px; }
+
+  @media (max-width: 768px) {
+    .s3 .demo-hero .big-num { font-size: 80px; top: -20px; }
+  }
+
+  /* ═══════════════════════════════════════
+     4 · GRID CONSTRUCT · 网格建筑
+     ═══════════════════════════════════════ */
+  .s4 {
+    background: #0f0f14;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    color: #e0dcd5;
+  }
+  .s4::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(72, 199, 142, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(72, 120, 199, 0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .s4 .style-label { color: rgba(255,255,255,0.3); }
+
+  .s4 .demo-nav { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .s4 .demo-nav-logo {
+    color: #e0dcd5;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    text-transform: uppercase;
+  }
+  .s4 .demo-nav-logo b { font-weight: 700; color: #48c78e; }
+  .s4 .demo-nav-links a { color: rgba(255,255,255,0.35); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .s4 .demo-nav-links a:hover { color: #48c78e; }
+
+  .s4 .demo-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: end;
+  }
+  .s4 .demo-hero h1 {
+    font-size: clamp(40px, 6vw, 68px);
+    font-weight: 200;
+    font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
+    color: #e0dcd5;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+  .s4 .demo-hero h1 strong {
+    font-weight: 700;
+    color: #48c78e;
+    display: block;
+  }
+  .s4 .demo-hero .meta-block {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 20px;
+  }
+  .s4 .demo-hero .meta-block .stat-row {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 16px;
+  }
+  .s4 .demo-hero .meta-block .stat {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.35);
+  }
+  .s4 .demo-hero .meta-block .stat b {
+    display: block;
+    font-size: 28px;
+    font-weight: 600;
+    color: #e0dcd5;
+    margin-bottom: 2px;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .s4 .demo-hero p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 300;
+    line-height: 1.8;
+  }
+
+  .s4 .demo-btn-primary {
+    background: #48c78e;
+    color: #0f0f14;
+    font-weight: 600;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+  }
+  .s4 .demo-btn-primary:hover { background: #3bb07a; }
+  .s4 .demo-btn-secondary {
+    color: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 10px;
+  }
+  .s4 .demo-btn-secondary:hover { color: #fff; border-color: rgba(255,255,255,0.25); }
+
+  .s4 .demo-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 2px;
+  }
+  .s4 .demo-card:hover { border-color: rgba(72,199,142,0.2); background: rgba(72,199,142,0.03); }
+  .s4 .demo-card h3 { color: #e0dcd5; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .s4 .demo-card p { color: rgba(255,255,255,0.35); }
+  .s4 .demo-tag { background: rgba(72,199,142,0.08); color: #48c78e; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  @media (max-width: 768px) {
+    .s4 .demo-hero { grid-template-columns: 1fr; gap: 24px; }
+  }
+
+  /* ── 响应式卡片 ── */
+  @media (max-width: 768px) {
+    .demo-cards { grid-template-columns: 1fr; }
+    .style-section { padding: 40px 20px; }
+  }
+
+  /* ── 滚动平滑 ── */
+  html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ 1 · LIQUID GLASS ═══════════ -->
+<section class="style-section s1">
+  <div class="orb"></div><div class="orb"></div><div class="orb"></div>
+  <span class="style-label">01 · Liquid Glass 玻璃光晕</span>
+  <div class="style-container">
+    <div class="demo-nav">
+      <a class="demo-nav-logo">✦ 面试间</a>
+      <div class="demo-nav-links">
+        <a href="#">发现</a>
+        <a href="#">预约</a>
+        <a href="#">社区</a>
+        <a class="demo-btn demo-btn-primary" href="#">加入</a>
+      </div>
+    </div>
+
+    <div class="demo-hero">
+      <h1>找到你的<em>最佳</em><br>面试搭档</h1>
+      <p>在真实的对话中积累经验。匹配志同道合的同学，进行一对一模拟面试，共同打磨你的面试技巧。</p>
+      <div class="demo-actions">
+        <a class="demo-btn demo-btn-primary" href="#">开始探索 →</a>
+        <a class="demo-btn demo-btn-secondary" href="#">了解更多</a>
+      </div>
+    </div>
+
+    <div class="demo-cards">
+      <div class="demo-card">
+        <h3>智能匹配</h3>
+        <p>按技能栈与目标公司精确筛选面试伙伴</p>
+        <span class="demo-tag">React</span><span class="demo-tag">系统设计</span><span class="demo-tag">Go</span>
+      </div>
+      <div class="demo-card">
+        <h3>时间协调</h3>
+        <p>发布空闲时段，自动匹配双方可用时间</p>
+        <span class="demo-tag">本周可约</span>
+      </div>
+      <div class="demo-card">
+        <h3>双向反馈</h3>
+        <p>完成模拟面试后交换评价，共同进步</p>
+        <span class="demo-tag">社区 · 85</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 2 · KINETIC TYPOGRAPHY ═══════════ -->
+<section class="style-section s2">
+  <span class="style-label">02 · Kinetic Typography 动态排版</span>
+  <div class="style-container">
+    <div class="demo-nav">
+      <a class="demo-nav-logo">Interview</a>
+      <div class="demo-nav-links">
+        <a href="#">发现</a>
+        <a href="#">预约</a>
+        <a href="#">社区</a>
+        <a class="demo-btn demo-btn-primary" href="#">加入</a>
+      </div>
+    </div>
+
+    <div class="demo-hero">
+      <div class="hero-left">
+        <h1><span class="accent">Practice makes perfect</span>和同学一起<br>练习面试</h1>
+        <p>找到志同道合的伙伴，在一对一的真实对话中积累经验。不是背答案，而是在彼此的反馈中真正成长。</p>
+        <div class="demo-actions">
+          <a class="demo-btn demo-btn-primary" href="#">开始练习 →</a>
+          <a class="demo-btn demo-btn-secondary" href="#">浏览社区</a>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="overlay-text">
+          <strong>"最好的准备不是独自练习，而是一起成长"</strong>
+          来自社区的面试互助者
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cards">
+      <div class="demo-card"><h3>发现伙伴</h3><p>按技能、公司与经验年限精确筛选</p><span class="demo-tag">React</span><span class="demo-tag">系统设计</span></div>
+      <div class="demo-card"><h3>面试间</h3><p>发布时间、处理预约、管理日程</p><span class="demo-tag">可预约</span></div>
+      <div class="demo-card"><h3>经验分享</h3><p>面经讨论、求职技巧、社区互助</p><span class="demo-tag">热门</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 3 · MATERIAL CANVAS ═══════════ -->
+<section class="style-section s3">
+  <span class="style-label">03 · Material Canvas 材质画布</span>
+  <div class="style-container">
+    <div class="demo-nav">
+      <a class="demo-nav-logo">面试间</a>
+      <div class="demo-nav-links">
+        <a href="#">发现</a>
+        <a href="#">预约</a>
+        <a href="#">社区</a>
+        <a class="demo-btn demo-btn-primary" href="#">加入</a>
+      </div>
+    </div>
+
+    <div class="demo-hero">
+      <div class="big-num">01</div>
+      <div class="content">
+        <h1>和同学一起<br><em>练习面试</em></h1>
+        <p>找到志同道合的伙伴，进行一对一模拟面试。在真实的对话中积累经验，在彼此的反馈中收获成长。</p>
+        <div class="demo-actions">
+          <a class="demo-btn demo-btn-primary" href="#">开始寻找 →</a>
+          <a class="demo-btn demo-btn-secondary" href="#">了解更多</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cards">
+      <div class="demo-card"><h3>发现伙伴</h3><p>按你的技术栈和目标公司找到最匹配的面试搭档</p><span class="demo-tag">React</span><span class="demo-tag">Go</span></div>
+      <div class="demo-card"><h3>预约管理</h3><p>发布空闲时间，一站式管理收到和发出的预约请求</p><span class="demo-tag">本周</span></div>
+      <div class="demo-card"><h3>经验社区</h3><p>分享面试心得，讨论求职策略，一起成长</p><span class="demo-tag">社区</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 4 · GRID CONSTRUCT ═══════════ -->
+<section class="style-section s4">
+  <span class="style-label">04 · Grid Construct 网格建筑</span>
+  <div class="style-container">
+    <div class="demo-nav">
+      <a class="demo-nav-logo"><b>Mock</b>Interview</a>
+      <div class="demo-nav-links">
+        <a href="#">Find</a>
+        <a href="#">Slots</a>
+        <a href="#">Feed</a>
+        <a class="demo-btn demo-btn-primary" href="#">Join</a>
+      </div>
+    </div>
+
+    <div class="demo-hero">
+      <div>
+        <h1>Find your<br><strong>interview partner</strong></h1>
+      </div>
+      <div class="meta-block">
+        <div class="stat-row">
+          <div class="stat"><b>1,284</b>活跃用户</div>
+          <div class="stat"><b>3,562</b>完成面试</div>
+        </div>
+        <p>匹配志同道合的同学，进行一对一模拟面试。在真实的对话中积累经验，在彼此的反馈中共同成长。</p>
+        <div class="demo-actions">
+          <a class="demo-btn demo-btn-primary" href="#">开始探索</a>
+          <a class="demo-btn demo-btn-secondary" href="#">查看数据</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-cards">
+      <div class="demo-card"><h3>Discover</h3><p>按技能栈与目标公司精确筛选</p><span class="demo-tag">React</span><span class="demo-tag">System Design</span></div>
+      <div class="demo-card"><h3>Schedule</h3><p>发布空闲时段，自动时间匹配</p><span class="demo-tag">Available</span></div>
+      <div class="demo-card"><h3>Community</h3><p>面试经验与专业讨论</p><span class="demo-tag">Active</span></div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

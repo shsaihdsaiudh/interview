@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>像素风格 · 隐忍版</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:           #1e1e22;
+    --bg-raised:    #2a2a32;
+    --border:       #44444e;
+    --border-hover: #5e5e6a;
+    --text:         #eeeeee;
+    --text-dim:     #aaaab2;
+    --text-muted:   #72727c;
+    --accent:       #b0b0b8;
+    --accent-warm:  #e0b868;
+    --danger:       #e07070;
+    --success:      #80cc88;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 18px;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: unset;
+  }
+
+  /* ═══════════════════════════════════════
+     像素切角 · 克制版 (3px 阶梯)
+     ═══════════════════════════════════════ */
+
+  .pixel-box {
+    border: 1px solid var(--border);
+    clip-path: polygon(
+      0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px,
+      100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)
+    );
+  }
+  .pixel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    text-decoration: none;
+    clip-path: polygon(
+      0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px,
+      100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)
+    );
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .pixel-btn:hover { border-color: var(--border-hover); color: var(--text); }
+  .pixel-btn.primary { background: var(--accent-warm); color: #1a1a1e; border-color: var(--accent-warm); font-weight: 700; }
+  .pixel-btn.primary:hover { background: #ecc878; border-color: #ecc878; }
+  .pixel-btn.warm { color: var(--accent-warm); border-color: rgba(160,144,112,0.25); }
+  .pixel-btn.warm:hover { border-color: rgba(160,144,112,0.5); color: var(--accent-warm); }
+
+  .pixel-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    margin: 2px;
+    clip-path: polygon(
+      0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px,
+      100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px)
+    );
+  }
+
+  .pixel-input {
+    width: 100%;
+    padding: 8px 12px;
+    font-family: 'VT323', 'Noto Sans SC', monospace;
+    font-size: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    outline: none;
+    clip-path: polygon(
+      0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px,
+      100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)
+    );
+    transition: border-color 0.2s;
+  }
+  .pixel-input:focus { border-color: var(--border-hover); }
+  .pixel-input::placeholder { color: var(--text-muted); }
+
+  /* ═══════════════════════════════════════
+     布局
+     ═══════════════════════════════════════ */
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── 导航 ── */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(30,30,34,0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-size: 18px;
+  }
+  .nav-logo .mark {
+    display: grid;
+    grid-template-columns: 4px 4px;
+    gap: 2px;
+    width: 10px; height: 10px;
+  }
+  .nav-logo .mark span { display: block; background: var(--text-dim); }
+  .nav-links { display: flex; gap: 20px; align-items: center; }
+  .nav-links a {
+    font-size: 16px;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 2px 0;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--text-dim); }
+  .nav-links a.on { color: var(--text); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 72px 0 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
+    align-items: start;
+  }
+  .hero-text .eyebrow {
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-text .eyebrow::before {
+    content: '';
+    width: 4px; height: 4px;
+    background: var(--accent-warm);
+  }
+  .hero-text h1 {
+    font-size: clamp(30px, 5vw, 48px);
+    font-weight: 400;
+    line-height: 1.2;
+    color: var(--text);
+  }
+  .hero-text h1 em {
+    font-style: normal;
+    color: var(--accent-warm);
+  }
+  .hero-text p {
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    max-width: 360px;
+    margin-top: 16px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  /* 右侧像素文字 — 终端闪烁效果 */
+  .hero-gfx {
+    display: grid;
+    gap: 2px;
+    opacity: 0.6;
+    margin-left: auto;
+  }
+  .hero-gfx span { display: block; border-radius: 0; background: transparent; }
+
+  /* 闪烁动画 — 每个像素随机节奏 */
+  @keyframes scramble {
+    0%, 88%      { background: var(--text-dim); }
+    89%, 91%     { background: var(--accent-warm); }
+    92%, 94%     { background: var(--text); }
+    95%, 96%     { background: var(--text-muted); }
+    97%, 100%    { background: var(--text-dim); }
+  }
+  @keyframes scramble-fast {
+    0%, 75%      { background: var(--text-dim); }
+    76%, 78%     { background: var(--accent-warm); }
+    79%, 82%     { background: var(--text); }
+    83%, 85%     { background: var(--text-muted); }
+    86%, 100%    { background: var(--text-dim); }
+  }
+  @keyframes scramble-slow {
+    0%, 92%      { background: var(--text-dim); }
+    93%, 95%     { background: var(--accent-warm); }
+    96%, 97%     { background: var(--text); }
+    98%, 100%    { background: var(--text-dim); }
+  }
+
+  .hero-gfx span.f1 { animation: scramble 3.5s steps(1) infinite; }
+  .hero-gfx span.f2 { animation: scramble-fast 2.8s steps(1) infinite; }
+  .hero-gfx span.f3 { animation: scramble-slow 4.2s steps(1) infinite; }
+
+  /* ── 分隔线 ── */
+  .hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0;
+  }
+
+  /* ── 功能区 ── */
+  .section {
+    padding: 48px 0;
+  }
+  .section-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1; height: 1px;
+    background: var(--border);
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    padding: 20px;
+    clip-path: polygon(
+      0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px,
+      100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px)
+    );
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border-hover); }
+  .card h3 { font-size: 18px; font-weight: 400; color: var(--text); margin-bottom: 6px; }
+  .card p { font-size: 14px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
+
+  /* ── 登录表单 ── */
+  .form-block {
+    max-width: 400px;
+    margin: 0 auto;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    padding: 28px;
+    clip-path: polygon(
+      0 4px, 4px 4px, 4px 0, calc(100% - 4px) 0, calc(100% - 4px) 4px,
+      100% 4px, 100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
+      calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px)
+    );
+  }
+  .form-block h2 {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .form-block .sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .form-block .field {
+    margin-bottom: 14px;
+  }
+  .form-block .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.03em;
+  }
+  .form-block .field .suffix {
+    display: flex;
+  }
+  .form-block .field .suffix input {
+    flex: 1;
+    border-right: 0;
+    clip-path: polygon(
+      0 3px, 3px 3px, 3px 0, 100% 0, 100% 100%, 0 100%
+    );
+  }
+  .form-block .field .suffix span {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-left: 0;
+    white-space: nowrap;
+  }
+  .form-block .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .form-block .actions .pixel-btn { flex: 1; justify-content: center; }
+  .form-block .alt {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .form-block .alt:hover { color: var(--text-dim); }
+
+  /* ── 页脚 ── */
+  .footer {
+    text-align: center;
+    padding: 28px 0;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 48px;
+  }
+
+  /* ── 滚动条 ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-gfx { opacity: 0.4; max-width: 100%; overflow: hidden; }
+    .cards { grid-template-columns: 1fr; }
+    .nav-links { gap: 12px; }
+    .nav-links a { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ═══ 导航 ═══ -->
+  <nav class="nav">
+    <a href="#" class="nav-logo">
+      <span class="mark"><span></span><span></span><span></span><span></span></span>
+      mock·io
+    </a>
+    <div class="nav-links">
+      <a href="#" class="on">find</a>
+      <a href="#">slots</a>
+      <a href="#">card</a>
+      <a href="#">feed</a>
+      <a href="#" class="pixel-btn warm" style="font-size:14px;padding:4px 12px;">sign in</a>
+    </div>
+  </nav>
+
+  <!-- ═══ Hero ═══ -->
+  <section class="hero">
+    <div class="hero-text">
+      <div class="eyebrow">1,284 peers online</div>
+      <h1>和同学一起<br><em>练习面试</em></h1>
+      <p>找到志同道合的伙伴，进行一对一模拟面试。在真实的对话中积累经验，在彼此的反馈中收获成长。</p>
+      <div class="hero-actions">
+        <a href="#" class="pixel-btn primary">开始寻找</a>
+        <a href="#" class="pixel-btn">了解更多</a>
+      </div>
+    </div>
+
+    <div class="hero-gfx" id="pixel-word"></div>
+  </section>
+
+  <hr class="hr">
+
+  <!-- ═══ 功能入口 ═══ -->
+  <div class="section">
+    <div class="section-label">· menu ·</div>
+    <div class="cards">
+      <div class="card">
+        <h3>[1] 发现伙伴</h3>
+        <p>按技能栈与目标公司精确筛选面试搭档</p>
+        <span class="pixel-tag">react</span><span class="pixel-tag">go</span><span class="pixel-tag">sys-design</span>
+      </div>
+      <div class="card">
+        <h3>[2] 时间管理</h3>
+        <p>发布空闲时段，自动匹配双方可用时间</p>
+        <span class="pixel-tag">available</span>
+      </div>
+      <div class="card">
+        <h3>[3] 经验社区</h3>
+        <p>分享面试心得，讨论求职策略</p>
+        <span class="pixel-tag">feed</span><span class="pixel-tag">share</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="hr">
+
+  <!-- ═══ 登录表单 ═══ -->
+  <div class="section" style="display:flex;justify-content:center;">
+    <div class="form-block">
+      <h2>sign in</h2>
+      <p class="sub">登录你的账号</p>
+
+      <div class="field">
+        <label>学号</label>
+        <div class="suffix">
+          <input class="pixel-input" type="text" placeholder="2024010914026" value="">
+          <span>@std.uestc.edu.cn</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input class="pixel-input" type="password" placeholder="········" value="">
+      </div>
+      <div class="actions">
+        <button class="pixel-btn primary" style="flex:1;justify-content:center;">登录</button>
+        <button class="pixel-btn" style="flex:1;justify-content:center;">取消</button>
+      </div>
+      <a href="#" class="alt">没有账号？注册 →</a>
+    </div>
+  </div>
+
+  <!-- ═══ 页脚 ═══ -->
+  <div class="footer">
+    mock·io · 面试互助平台
+  </div>
+
+</div>
+<script>
+/* ═══════════════════════════════════════
+   像素文字生成器 — 终端闪烁「MATCH」
+   5x7 像素字体, 每个像素独立随机闪烁
+   ═══════════════════════════════════════ */
+
+const FONT = {
+  A: ['01110','10001','10001','11111','10001','10001','10001'],
+  B: ['11110','10001','10001','11110','10001','10001','11110'],
+  C: ['01110','10001','10000','10000','10000','10001','01110'],
+  D: ['11110','10001','10001','10001','10001','10001','11110'],
+  E: ['11111','10000','10000','11110','10000','10000','11111'],
+  F: ['11111','10000','10000','11110','10000','10000','10000'],
+  G: ['01110','10001','10000','10111','10001','10001','01110'],
+  H: ['10001','10001','10001','11111','10001','10001','10001'],
+  I: ['01110','00100','00100','00100','00100','00100','01110'],
+  J: ['00111','00010','00010','00010','00010','10010','01100'],
+  K: ['10001','10010','10100','11000','10100','10010','10001'],
+  L: ['10000','10000','10000','10000','10000','10000','11111'],
+  M: ['10001','11011','10101','10101','10001','10001','10001'],
+  N: ['10001','11001','10101','10011','10001','10001','10001'],
+  O: ['01110','10001','10001','10001','10001','10001','01110'],
+  P: ['11110','10001','10001','11110','10000','10000','10000'],
+  Q: ['01110','10001','10001','10001','10101','10010','01101'],
+  R: ['11110','10001','10001','11110','10100','10010','10001'],
+  S: ['01111','10000','10000','01110','00001','00001','11110'],
+  T: ['11111','00100','00100','00100','00100','00100','00100'],
+  U: ['10001','10001','10001','10001','10001','10001','01110'],
+  V: ['10001','10001','10001','10001','01010','01010','00100'],
+  W: ['10001','10001','10001','10101','10101','11011','10001'],
+  X: ['10001','10001','01010','00100','01010','10001','10001'],
+  Y: ['10001','10001','01010','00100','00100','00100','00100'],
+  Z: ['11111','00001','00010','00100','01000','10000','11111'],
+};
+
+const WORD = 'MATCH';
+const COLS = WORD.length * 5 + (WORD.length - 1); // letters 5-wide + 1-col gaps
+const ROWS = 7;
+const FLICKERS = ['f1','f2','f3'];
+
+const container = document.getElementById('pixel-word');
+container.style.gridTemplateColumns = `repeat(${COLS}, 8px)`;
+container.style.gridTemplateRows = `repeat(${ROWS}, 8px)`;
+
+for (let row = 0; row < ROWS; row++) {
+  let colIdx = 0;
+  for (let li = 0; li < WORD.length; li++) {
+    const letter = WORD[li];
+    const glyph = FONT[letter] || FONT['A'];
+    for (let lc = 0; lc < 5; lc++) {
+      const span = document.createElement('span');
+      if (glyph[row][lc] === '1') {
+        span.className = FLICKERS[Math.floor(Math.random() * FLICKERS.length)];
+      }
+      container.appendChild(span);
+    }
+    // gap column between letters
+    if (li < WORD.length - 1) {
+      const gap = document.createElement('span');
+      container.appendChild(gap);
+    }
+  }
+}
+</script>
+</body>
+</html>
