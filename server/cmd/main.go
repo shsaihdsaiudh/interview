@@ -26,6 +26,11 @@ func main() {
 	pool := persistence.NewPool(ctx, dsn)
 	defer pool.Close()
 
+	// ── 1.1 自动建表/迁移（幂等，多次启动不会报错）──
+	if err := persistence.RunMigrations(ctx, pool); err != nil {
+		log.Fatalf("数据库迁移失败: %v", err)
+	}
+
 	// ── 2. 基础设施层：PostgresRepo 同时满足两个领域接口 ──
 	repo := persistence.NewPostgresRepo(pool)
 
