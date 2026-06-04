@@ -162,6 +162,7 @@ func createUser(repo *persistence.PostgresRepo, tu testUser) *user.User {
 		Email:         tu.Email,
 		PasswordHash:  string(hash),
 		Nickname:      tu.Nickname,
+		Tags:          tu.Skills,
 		EmailVerified: true,
 		CreatedAt:     time.Now(),
 	}
