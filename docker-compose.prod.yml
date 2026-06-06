@@ -53,6 +53,13 @@ services:
     container_name: interview-frontend
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # 挂载 Let's Encrypt 证书（由 certbot 管理）
+      - /etc/letsencrypt/live/ggggs.icu/fullchain.pem:/etc/letsencrypt/live/ggggs.icu/fullchain.pem:ro
+      - /etc/letsencrypt/live/ggggs.icu/privkey.pem:/etc/letsencrypt/live/ggggs.icu/privkey.pem:ro
+      - /etc/letsencrypt/options-ssl-nginx.conf:/etc/letsencrypt/options-ssl-nginx.conf:ro
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/letsencrypt/ssl-dhparams.pem:ro
     depends_on:
       - backend
     networks:
