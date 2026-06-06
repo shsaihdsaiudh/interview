@@ -1,0 +1,11 @@
+# ── 生产运行镜像（预编译二进制，不在服务器上编译）──
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+COPY interview-server .
+
+EXPOSE 8080
+
+CMD ["./interview-server"]

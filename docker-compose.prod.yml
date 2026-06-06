@@ -1,0 +1,67 @@
+services:
+  # ── PostgreSQL 数据库 ──
+  postgres:
+    image: postgres:17-alpine
+    container_name: interview-pg
+    environment:
+      POSTGRES_USER: interview
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?生产环境必须设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: interview_platform
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - interview-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interview -d interview_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Go 后端 ──
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.prod
+    container_name: interview-backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://interview:${POSTGRES_PASSWORD:?生产环境必须设置 POSTGRES_PASSWORD}@postgres:5432/interview_platform?sslmode=disable
+      # JWT 签名密钥（生产环境务必设置为强随机字符串！）
+      JWT_SECRET: ${JWT_SECRET:?生产环境必须设置 JWT_SECRET}
+      # CORS 生产环境设置具体域名
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      # SMTP 邮件配置（可选，不配则验证码打印日志）
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_TLS_SERVERNAME: ${SMTP_TLS_SERVERNAME:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - interview-net
+    restart: unless-stopped
+
+  # ── Nginx 前端 ──
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile.prod
+    container_name: interview-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - interview-net
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+
+networks:
+  interview-net:
+    driver: bridge

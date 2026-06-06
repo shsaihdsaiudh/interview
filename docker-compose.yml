@@ -4,7 +4,7 @@ services:
     container_name: interview-pg
     environment:
       POSTGRES_USER: interview
-      POSTGRES_PASSWORD: interview123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-interview123}
       POSTGRES_DB: interview_platform
     ports:
       - "5432:5432"

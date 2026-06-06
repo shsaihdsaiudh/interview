@@ -1,0 +1,23 @@
+# Go build artifacts
+*.exe
+*.test
+*.out
+tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Test data
+testutil/
+coverage.out

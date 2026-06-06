@@ -91,6 +91,7 @@ func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		dsn = "postgres://interview:interview123@localhost:5432/interview_platform?sslmode=disable"
+		fmt.Println("⚠️  [安全警告] DATABASE_URL 环境变量未设置，使用默认开发数据库连接。")
 	}
 
 	fmt.Println("🌱 Seed: 连接数据库...")

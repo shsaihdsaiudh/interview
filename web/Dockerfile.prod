@@ -1,0 +1,5 @@
+# ── 生产运行镜像（预构建前端，不在服务器上构建）──
+FROM nginx:alpine
+
+COPY dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf

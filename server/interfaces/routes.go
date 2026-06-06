@@ -2,6 +2,8 @@
 package interfaces
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"interview-server/interfaces/handler"
@@ -16,6 +18,9 @@ func RegisterRoutes(
 	apptH *handler.AppointmentHandler,
 	recruitH *handler.RecruitmentHandler,
 ) {
+	// ── 速率限制器（基于 IP 的滑动窗口）──
+	limiter := middleware.NewRateLimiter()
+
 	// ── 静态文件服务：映射 /uploads/ 到 server/uploads/ 目录 ──
 	r.Static("/uploads", "./server/uploads")
 
@@ -31,14 +36,19 @@ func RegisterRoutes(
 	{
 		v1.GET("/ping", handler.Ping)
 
-		// ── 认证路由（无需登录）──
+		// ── 认证路由（无需登录，已应用速率限制防暴力破解）──
 		auth := v1.Group("/auth")
 		{
-			auth.POST("/send-code", userH.SendCode)
-			auth.POST("/register", userH.Register)
-			auth.POST("/login", userH.Login)
-			auth.POST("/forgot-password", userH.ForgotPassword)
-			auth.POST("/reset-password", userH.ResetPassword)
+			// 发送验证码：每 IP 每分钟最多 2 次（防邮件轰炸）
+			auth.POST("/send-code", limiter.Limit(2, time.Minute), userH.SendCode)
+			// 注册：每 IP 每分钟最多 10 次（防暴力破解验证码）
+			auth.POST("/register", limiter.Limit(10, time.Minute), userH.Register)
+			// 登录：每 IP 每分钟最多 20 次（防暴力破解密码）
+			auth.POST("/login", limiter.Limit(20, time.Minute), userH.Login)
+			// 忘记密码：每 IP 每分钟最多 2 次（防邮件轰炸）
+			auth.POST("/forgot-password", limiter.Limit(2, time.Minute), userH.ForgotPassword)
+			// 重置密码：每 IP 每分钟最多 5 次（防暴力破解）
+			auth.POST("/reset-password", limiter.Limit(5, time.Minute), userH.ResetPassword)
 
 			authRequired := auth.Group("")
 			authRequired.Use(middleware.JWTAuth())

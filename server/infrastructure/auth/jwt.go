@@ -5,12 +5,25 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("interview-platform-secret-key") // TODO: 生产环境用环境变量
+// jwtSecret JWT 签名密钥，通过环境变量 JWT_SECRET 注入。
+// 生产环境必须设置强随机密钥（至少 32 字节）；未设置时使用开发默认值并打印警告。
+var jwtSecret []byte
+
+func init() {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "interview-platform-dev-secret-key--change-in-production!!"
+		log.Println("⚠️  [安全警告] JWT_SECRET 环境变量未设置，使用不安全的默认密钥！生产环境务必设置 JWT_SECRET。")
+	}
+	jwtSecret = []byte(secret)
+}
 
 // GenerateJWT 生成 JWT token（24 小时有效）。
 func GenerateJWT(email string) (string, error) {

@@ -22,7 +22,11 @@ func main() {
 
 	// ── 1. 基础设施层：PostgreSQL 连接池 ──
 	ctx := context.Background()
-	dsn := "postgres://interview:interview123@localhost:5432/interview_platform?sslmode=disable"
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "postgres://interview:interview123@localhost:5432/interview_platform?sslmode=disable"
+		log.Println("⚠️  [安全警告] DATABASE_URL 环境变量未设置，使用默认开发数据库连接。生产环境务必通过环境变量配置！")
+	}
 	pool := persistence.NewPool(ctx, dsn)
 	defer pool.Close()
 
