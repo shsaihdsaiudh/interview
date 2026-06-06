@@ -76,3 +76,17 @@ SMTP_TLS_SERVERNAME=icoremail.net
 - 前端: React + TypeScript + Vite + Tailwind CSS
 - 数据库: PostgreSQL 17
 - 部署: Docker Compose（Nginx 反向代理 + Go 后端 + PostgreSQL）
+
+## 已知问题 & 踩坑记录
+
+### 部署时端口 80 冲突
+服务器上有一个 host-level 的 nginx（可能是 Certbot/Let's Encrypt 装的），占用 80 端口。
+Docker 前端容器需要先停掉它：
+```bash
+ssh root@ggggs.icu "systemctl stop nginx; systemctl disable nginx"
+```
+然后再 `docker compose up -d`。如果容器已经创建但端口绑定损坏（`invalid IP`），需要 `docker rm` 后重建。
+
+### Docker Hub 镜像拉取慢
+国内服务器拉 Docker Hub 镜像可能极慢（下载 20MB nginx 镜像要 7+ 分钟）。
+已配置了 registry mirrors，但稳定性看运气。如果遇到超时，多试几次 `docker pull`。
