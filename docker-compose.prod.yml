@@ -32,6 +32,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?生产环境必须设置 JWT_SECRET}
       # CORS 生产环境设置具体域名
       CORS_ORIGIN: ${CORS_ORIGIN:-}
+      # 管理员邮箱（启动时自动提升为管理员）
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       # SMTP 邮件配置（可选，不配则验证码打印日志）
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}

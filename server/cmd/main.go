@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"interview-server/application"
+	domainUser "interview-server/domain/user"
 	"interview-server/infrastructure/mail"
 	"interview-server/infrastructure/persistence"
 	"interview-server/interfaces"
@@ -45,15 +46,31 @@ func main() {
 	userSvc := application.NewUserService(repo, repo, mailSender)
 	apptSvc := application.NewAppointmentService(repo, repo)
 	recruitSvc := application.NewRecruitmentService(repo, repo)
+	adminSvc := application.NewAdminService(repo, repo, repo)
 
 	// ── 5. 接口层：HTTP 处理器 ──
 	userH := handler.NewUserHandler(userSvc)
 	apptH := handler.NewAppointmentHandler(apptSvc)
 	recruitH := handler.NewRecruitmentHandler(recruitSvc)
+	adminH := handler.NewAdminHandler(adminSvc)
+
+	// ── 5.1 自动提升管理员（从 ADMIN_EMAIL 环境变量读取）──
+	if adminEmail := os.Getenv("ADMIN_EMAIL"); adminEmail != "" {
+		if u, err := repo.FindByEmail(adminEmail); err == nil {
+			if !u.IsAdmin() {
+				u.Role = domainUser.RoleAdmin
+				if err := repo.Update(u); err == nil {
+					log.Printf("👑 已将 %s 提升为管理员", adminEmail)
+				}
+			}
+		} else {
+			log.Printf("⚠️  ADMIN_EMAIL=%s 对应的用户尚未注册，将在注册后自动提升为管理员", adminEmail)
+		}
+	}
 
 	// ── 6. 路由注册 ──
 	r := gin.Default()
-	interfaces.RegisterRoutes(r, userH, apptH, recruitH)
+	interfaces.RegisterRoutes(r, userH, apptH, recruitH, adminH, repo)
 
 	// ── 7. 启动服务 ──
 	port := os.Getenv("PORT")

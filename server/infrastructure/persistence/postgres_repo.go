@@ -42,11 +42,11 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 func (r *PostgresRepo) Create(u *user.User) error {
 	_, err := r.pool.Exec(context.Background(),
 		`INSERT INTO users (email, password_hash, nickname, student_id, department,
-		 tags, avatar, contact_info, email_verified, created_at)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+		 tags, avatar, contact_info, role, email_verified, created_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
 		u.Email, u.PasswordHash, u.Nickname, u.StudentID,
 		u.Department, u.Tags, u.Avatar, u.ContactInfo,
-		u.EmailVerified, u.CreatedAt,
+		u.Role, u.EmailVerified, u.CreatedAt,
 	)
 	if err != nil {
 		if isDuplicateKey(err) {
@@ -62,12 +62,12 @@ func (r *PostgresRepo) FindByEmail(email string) (*user.User, error) {
 	u := &user.User{}
 	err := r.pool.QueryRow(context.Background(),
 		`SELECT email, password_hash, nickname, student_id, department,
-		        tags, avatar, contact_info, email_verified, created_at
+		        tags, avatar, contact_info, role, email_verified, created_at
 		 FROM users WHERE email = $1`, email,
 	).Scan(
 		&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
 		&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
-		&u.EmailVerified, &u.CreatedAt,
+		&u.Role, &u.EmailVerified, &u.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, user.ErrUserNotFound
@@ -82,12 +82,12 @@ func (r *PostgresRepo) FindByEmail(email string) (*user.User, error) {
 func (r *PostgresRepo) Update(u *user.User) error {
 	tag, err := r.pool.Exec(context.Background(),
 		`UPDATE users SET password_hash=$1, nickname=$2, student_id=$3,
-		 department=$4, tags=$5, avatar=$6, contact_info=$7,
-		 email_verified=$8, created_at=$9
-		 WHERE email=$10`,
+		 department=$4, tags=$5, avatar=$6, contact_info=$7, role=$8,
+		 email_verified=$9, created_at=$10
+		 WHERE email=$11`,
 		u.PasswordHash, u.Nickname, u.StudentID,
 		u.Department, u.Tags, u.Avatar, u.ContactInfo,
-		u.EmailVerified, u.CreatedAt,
+		u.Role, u.EmailVerified, u.CreatedAt,
 		u.Email,
 	)
 	if err != nil {
@@ -120,7 +120,7 @@ func (r *PostgresRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
 
 	rows, err := r.pool.Query(context.Background(),
 		`SELECT email, password_hash, nickname, student_id, department,
-		        tags, avatar, contact_info, email_verified, created_at
+		        tags, avatar, contact_info, role, email_verified, created_at
 		 FROM users WHERE email_verified = true
 		 ORDER BY created_at DESC
 		 LIMIT $1 OFFSET $2`, pageSize, offset,
@@ -136,13 +136,81 @@ func (r *PostgresRepo) FindAll(page, pageSize int) ([]*user.User, int, error) {
 		if err := rows.Scan(
 			&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
 			&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
-			&u.EmailVerified, &u.CreatedAt,
+			&u.Role, &u.EmailVerified, &u.CreatedAt,
 		); err != nil {
 			continue
 		}
 		users = append(users, u)
 	}
 	return users, total, nil
+}
+
+// FindAllAdmin 管理员查询所有用户（含未验证、已封禁），支持关键字搜索和分页。
+func (r *PostgresRepo) FindAllAdmin(keyword string, page, pageSize int) ([]*user.User, int, error) {
+	// 构建 WHERE 条件
+	whereClause := "1=1"
+	args := []interface{}{}
+	argIdx := 1
+
+	if keyword != "" {
+		whereClause = fmt.Sprintf("(email ILIKE $%d OR nickname ILIKE $%d OR student_id ILIKE $%d)", argIdx, argIdx+1, argIdx+2)
+		kw := "%" + keyword + "%"
+		args = append(args, kw, kw, kw)
+		argIdx += 3
+	}
+
+	// 查询总数
+	var total int
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM users WHERE %s", whereClause)
+	if err := r.pool.QueryRow(context.Background(), countSQL, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []*user.User{}, 0, nil
+	}
+
+	// 分页
+	offset := (page - 1) * pageSize
+	dataArgs := make([]interface{}, len(args))
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, pageSize, offset)
+
+	dataSQL := fmt.Sprintf(
+		`SELECT email, password_hash, nickname, student_id, department,
+		        tags, avatar, contact_info, role, email_verified, created_at
+		 FROM users WHERE %s
+		 ORDER BY created_at DESC
+		 LIMIT $%d OFFSET $%d`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.pool.Query(context.Background(), dataSQL, dataArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var users []*user.User
+	for rows.Next() {
+		u := &user.User{}
+		if err := rows.Scan(
+			&u.Email, &u.PasswordHash, &u.Nickname, &u.StudentID,
+			&u.Department, &u.Tags, &u.Avatar, &u.ContactInfo,
+			&u.Role, &u.EmailVerified, &u.CreatedAt,
+		); err != nil {
+			continue
+		}
+		users = append(users, u)
+	}
+	return users, total, nil
+}
+
+// CountByDate 统计指定日期及之后注册的用户数。
+func (r *PostgresRepo) CountByDate(since string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM users WHERE created_at >= $1::date`, since,
+	).Scan(&count)
+	return count, err
 }
 
 // Delete 删除用户及其关联数据。
@@ -248,6 +316,112 @@ func (r *PostgresRepo) FindAppointmentsByTimeSlotID(timeSlotID string) []*appoin
 		        message, status, reject_reason, created_at
 		 FROM appointments WHERE time_slot_id = $1`, timeSlotID,
 	)
+}
+
+// FindAllAppointments 管理员查询所有预约（分页）。
+func (r *PostgresRepo) FindAllAppointments(page, pageSize int) ([]*appointment.Appointment, int, error) {
+	var total int
+	err := r.pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM appointments`).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []*appointment.Appointment{}, 0, nil
+	}
+
+	offset := (page - 1) * pageSize
+	rows, err := r.pool.Query(context.Background(),
+		`SELECT id, mentor_id, student_id, time_slot_id,
+		        message, status, reject_reason, created_at
+		 FROM appointments
+		 ORDER BY created_at DESC
+		 LIMIT $1 OFFSET $2`, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var result []*appointment.Appointment
+	for rows.Next() {
+		a := &appointment.Appointment{}
+		if err := rows.Scan(
+			&a.ID, &a.MentorID, &a.StudentID, &a.TimeSlotID,
+			&a.Message, &a.Status, &a.RejectReason, &a.CreatedAt,
+		); err != nil {
+			continue
+		}
+		result = append(result, a)
+	}
+	return result, total, nil
+}
+
+// FindAllAppointmentsAdmin 管理员查询所有预约，JOIN 用户和时间段表获取完整信息。
+func (r *PostgresRepo) FindAllAppointmentsAdmin(page, pageSize int) ([]appointment.AdminAppointmentRow, int, error) {
+	var total int
+	err := r.pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM appointments`).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []appointment.AdminAppointmentRow{}, 0, nil
+	}
+
+	offset := (page - 1) * pageSize
+	rows, err := r.pool.Query(context.Background(),
+		`SELECT a.id, a.mentor_id, COALESCE(m.nickname, a.mentor_id),
+		        a.student_id, COALESCE(s.nickname, a.student_id),
+		        av.date::text, av.start_time::text, av.end_time::text,
+		        a.message, a.status, a.reject_reason,
+		        a.created_at::text
+		 FROM appointments a
+		 LEFT JOIN users m ON a.mentor_id = m.email
+		 LEFT JOIN users s ON a.student_id = s.email
+		 LEFT JOIN availabilities av ON a.time_slot_id = av.id
+		 ORDER BY a.created_at DESC
+		 LIMIT $1 OFFSET $2`, pageSize, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var result []appointment.AdminAppointmentRow
+	for rows.Next() {
+		var row appointment.AdminAppointmentRow
+		if err := rows.Scan(
+			&row.ID, &row.MentorID, &row.MentorNickname,
+			&row.StudentID, &row.StudentNickname,
+			&row.TimeSlotDate, &row.TimeSlotStart, &row.TimeSlotEnd,
+			&row.Message, &row.Status, &row.RejectReason,
+			&row.CreatedAt,
+		); err != nil {
+			continue
+		}
+		// 截取时间到分钟
+		if len(row.TimeSlotStart) >= 5 {
+			row.TimeSlotStart = row.TimeSlotStart[:5]
+		}
+		if len(row.TimeSlotEnd) >= 5 {
+			row.TimeSlotEnd = row.TimeSlotEnd[:5]
+		}
+		result = append(result, row)
+	}
+	return result, total, nil
+}
+
+// DeleteAppointmentByID 管理员删除预约。
+func (r *PostgresRepo) DeleteAppointmentByID(id string) error {
+	tag, err := r.pool.Exec(context.Background(),
+		`DELETE FROM appointments WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return appointment.ErrAppointmentNotFound
+	}
+	return nil
 }
 
 // HasActiveAppointment 检查时间段是否有活跃预约（pending 或 accepted）。
@@ -523,4 +697,80 @@ func (r *PostgresRepo) List(filter recruitment.ListCardsFilter) ([]*recruitment.
 	}
 
 	return cards, total, nil
+}
+
+// ListAllAdmin 管理员查询所有卡片（含非活跃），支持关键字搜索和分页。
+func (r *PostgresRepo) ListAllAdmin(keyword string, page, pageSize int) ([]*recruitment.RecruitmentCard, int, error) {
+	whereClause := "1=1"
+	var args []interface{}
+	argIdx := 1
+
+	if keyword != "" {
+		whereClause = fmt.Sprintf("(u.nickname ILIKE $%d OR u.email ILIKE $%d)", argIdx, argIdx+1)
+		kw := "%" + keyword + "%"
+		args = append(args, kw, kw)
+		argIdx += 2
+	}
+
+	// 查询总数
+	var total int
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM recruitment_cards rc LEFT JOIN users u ON rc.user_id = u.email WHERE %s", whereClause)
+	if err := r.pool.QueryRow(context.Background(), countSQL, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	if total == 0 {
+		return []*recruitment.RecruitmentCard{}, 0, nil
+	}
+
+	offset := (page - 1) * pageSize
+	dataArgs := make([]interface{}, len(args))
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, pageSize, offset)
+
+	dataSQL := fmt.Sprintf(
+		`SELECT rc.id, rc.user_id, u.nickname, u.avatar,
+		        rc.skills, rc.target_companies, rc.role,
+		        rc.experience_years, rc.bio, rc.is_active,
+		        rc.created_at, rc.updated_at
+		 FROM recruitment_cards rc
+		 LEFT JOIN users u ON rc.user_id = u.email
+		 WHERE %s
+		 ORDER BY rc.updated_at DESC
+		 LIMIT $%d OFFSET $%d`, whereClause, argIdx, argIdx+1)
+
+	rows, err := r.pool.Query(context.Background(), dataSQL, dataArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var cards []*recruitment.RecruitmentCard
+	for rows.Next() {
+		card := &recruitment.RecruitmentCard{}
+		if err := rows.Scan(
+			&card.ID, &card.UserID, &card.Nickname, &card.Avatar,
+			&card.Skills, &card.TargetCompanies,
+			&card.Role, &card.ExperienceYears, &card.Bio, &card.IsActive,
+			&card.CreatedAt, &card.UpdatedAt,
+		); err != nil {
+			continue
+		}
+		cards = append(cards, card)
+	}
+
+	return cards, total, nil
+}
+
+// DeleteByID 管理员删除卡片。
+func (r *PostgresRepo) DeleteByID(id string) error {
+	tag, err := r.pool.Exec(context.Background(),
+		`DELETE FROM recruitment_cards WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return recruitment.ErrCardNotFound
+	}
+	return nil
 }

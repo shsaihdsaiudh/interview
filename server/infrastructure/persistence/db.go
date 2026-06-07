@@ -30,8 +30,7 @@ func NewPool(ctx context.Context, dsn string) *pgxpool.Pool {
 
 // RunMigrations 执行幂等建表迁移，多次调用不会报错。
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	_, err := pool.Exec(ctx, migrationSQL)
-	if err != nil {
+	if _, err := pool.Exec(ctx, migrationSQL); err != nil {
 		return fmt.Errorf("执行数据库迁移失败: %w", err)
 	}
 	log.Println("✅ 数据库迁移完成")
@@ -50,6 +49,7 @@ CREATE TABLE IF NOT EXISTS users (
     tags           TEXT[] NOT NULL DEFAULT '{}',
     avatar         TEXT NOT NULL DEFAULT '',
     contact_info   TEXT NOT NULL DEFAULT '',
+    role           TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     verify_token   TEXT NOT NULL DEFAULT '',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -98,4 +98,10 @@ CREATE INDEX IF NOT EXISTS idx_appt_slot    ON appointments(time_slot_id);
 CREATE INDEX IF NOT EXISTS idx_appt_status  ON appointments(status);
 CREATE INDEX IF NOT EXISTS idx_card_user    ON recruitment_cards(user_id);
 CREATE INDEX IF NOT EXISTS idx_card_role    ON recruitment_cards(role);
+
+-- 迁移：为已有数据库添加 role 列（幂等）
+DO $$ BEGIN
+  ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
 `

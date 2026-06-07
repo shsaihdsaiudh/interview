@@ -16,6 +16,12 @@ type UserRepository interface {
 	// page 从 1 开始；返回值 (用户列表, 总记录数, error)。
 	FindAll(page, pageSize int) ([]*User, int, error)
 
+	// FindAllAdmin 管理员查询所有用户（含未验证、已封禁），支持搜索和分页。
+	FindAllAdmin(keyword string, page, pageSize int) ([]*User, int, error)
+
+	// CountByDate 统计指定日期及之后注册的用户数。
+	CountByDate(since string) (int, error)
+
 	// Delete 删除用户及其关联的空闲时间和预约。
 	// 如果用户不存在，返回 ErrUserNotFound。
 	Delete(email string) error

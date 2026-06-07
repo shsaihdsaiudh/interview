@@ -10,6 +10,11 @@ import ForgotPassword from '../pages/ForgotPassword';
 import Appointments from '../pages/Appointments';
 import Settings from '../pages/Settings';
 import CreateCard from '../pages/CreateCard';
+import AdminLayout from '../pages/admin/AdminLayout';
+import AdminDashboard from '../pages/admin/AdminDashboard';
+import AdminUsers from '../pages/admin/AdminUsers';
+import AdminCards from '../pages/admin/AdminCards';
+import AdminAppointments from '../pages/admin/AdminAppointments';
 
 const router = createBrowserRouter([
   {
@@ -25,6 +30,15 @@ const router = createBrowserRouter([
       { path: '/appointments', element: <Appointments /> },
       { path: '/settings', element: <Settings /> },
       { path: '/my-card', element: <CreateCard /> },
+    ],
+  },
+  {
+    element: <AdminLayout />,
+    children: [
+      { path: '/admin', element: <AdminDashboard /> },
+      { path: '/admin/users', element: <AdminUsers /> },
+      { path: '/admin/cards', element: <AdminCards /> },
+      { path: '/admin/appointments', element: <AdminAppointments /> },
     ],
   },
 ]);

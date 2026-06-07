@@ -7,6 +7,10 @@ import "time"
 const (
 	AccountStatusPendingVerification = "pending_verification"
 	AccountStatusActive              = "active"
+	AccountStatusBanned              = "banned"
+
+	RoleUser  = "user"
+	RoleAdmin = "admin"
 )
 
 // User 是用户聚合根。
@@ -20,6 +24,7 @@ type User struct {
 	Tags          []string
 	Avatar        string
 	ContactInfo   string
+	Role          string
 	EmailVerified bool
 	CreatedAt     time.Time
 }
@@ -36,7 +41,25 @@ func (u *User) AccountStatus() string {
 	if !u.EmailVerified {
 		return AccountStatusPendingVerification
 	}
+	if u.Role == AccountStatusBanned {
+		return AccountStatusBanned
+	}
 	return AccountStatusActive
+}
+
+// IsAdmin 检查用户是否为管理员。
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}
+
+// Ban 封禁用户。
+func (u *User) Ban() {
+	u.Role = AccountStatusBanned
+}
+
+// Unban 解封用户，恢复为普通用户。
+func (u *User) Unban() {
+	u.Role = RoleUser
 }
 
 
@@ -68,6 +91,7 @@ type UserResponse struct {
 	Tags          []string  `json:"tags"`
 	Avatar        string    `json:"avatar"`
 	ContactInfo   string    `json:"contact_info,omitempty"`
+	Role          string    `json:"role"`
 	EmailVerified bool      `json:"email_verified"`
 	AccountStatus string    `json:"account_status"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -82,6 +106,7 @@ func (u *User) ToResponse() UserResponse {
 		Department:    u.Department,
 		Tags:          u.Tags,
 		Avatar:        u.Avatar,
+		Role:          u.Role,
 		EmailVerified: u.EmailVerified,
 		AccountStatus: u.AccountStatus(),
 		CreatedAt:     u.CreatedAt,

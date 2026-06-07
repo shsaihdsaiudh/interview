@@ -91,6 +91,22 @@ type AddAvailabilityRequest struct {
 	EndTime   string `json:"end_time" binding:"required"`
 }
 
+// AdminAppointmentRow 管理员预约行（含用户昵称和时间段信息）。
+type AdminAppointmentRow struct {
+	ID              string `json:"id"`
+	MentorID        string `json:"mentor_id"`
+	MentorNickname  string `json:"mentor_nickname"`
+	StudentID       string `json:"student_id"`
+	StudentNickname string `json:"student_nickname"`
+	TimeSlotDate    string `json:"time_slot_date"`
+	TimeSlotStart   string `json:"time_slot_start"`
+	TimeSlotEnd     string `json:"time_slot_end"`
+	Message         string `json:"message"`
+	Status          string `json:"status"`
+	RejectReason    string `json:"reject_reason"`
+	CreatedAt       string `json:"created_at"`
+}
+
 // AppointmentResponse 预约响应（含关联用户信息）
 type AppointmentResponse struct {
 	ID           string    `json:"id"`

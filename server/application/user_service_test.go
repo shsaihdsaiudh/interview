@@ -96,6 +96,34 @@ func (m *mockUserRepo) Delete(email string) error {
 	return nil
 }
 
+func (m *mockUserRepo) FindAllAdmin(keyword string, page, pageSize int) ([]*user.User, int, error) {
+	// 简单返回所有用户（忽略 keyword 搜索）
+	var all []*user.User
+	for _, u := range m.usersByEmail {
+		all = append(all, u)
+	}
+	total := len(all)
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []*user.User{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
+}
+
+func (m *mockUserRepo) CountByDate(since string) (int, error) {
+	count := 0
+	for _, u := range m.usersByEmail {
+		if u.CreatedAt.Format("2006-01-02") >= since {
+			count++
+		}
+	}
+	return count, nil
+}
+
 // mockApptRepo 实现 appointment.AppointmentRepository，用于单元测试。
 type mockApptRepo struct {
 	appointments   map[string]*appointment.Appointment
@@ -192,6 +220,32 @@ func (m *mockApptRepo) FindAvailabilitiesByUserID(userID string) []*appointment.
 		}
 	}
 	return result
+}
+
+func (m *mockApptRepo) FindAllAppointments(page, pageSize int) ([]*appointment.Appointment, int, error) {
+	var all []*appointment.Appointment
+	for _, a := range m.appointments {
+		all = append(all, a)
+	}
+	total := len(all)
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []*appointment.Appointment{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
+}
+
+func (m *mockApptRepo) FindAllAppointmentsAdmin(page, pageSize int) ([]appointment.AdminAppointmentRow, int, error) {
+	return nil, 0, nil
+}
+
+func (m *mockApptRepo) DeleteAppointmentByID(id string) error {
+	delete(m.appointments, id)
+	return nil
 }
 
 // newTestUserService 创建测试用的 UserService 实例。

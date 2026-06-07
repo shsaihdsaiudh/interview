@@ -112,6 +112,7 @@ CREATE TABLE users (
     tags           TEXT[] NOT NULL DEFAULT '{}',
     avatar         TEXT NOT NULL DEFAULT '',
     contact_info   TEXT NOT NULL DEFAULT '',
+    role           TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     verify_token   TEXT NOT NULL DEFAULT '',
     created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()

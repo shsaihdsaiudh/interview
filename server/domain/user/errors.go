@@ -10,6 +10,7 @@ var (
 	ErrWrongPassword      = errors.New("密码错误")
 	ErrWrongOldPassword   = errors.New("旧密码错误")
 	ErrEmailNotVerified   = errors.New("邮箱未验证，请先验证邮箱")
-	ErrInvalidCode                      = errors.New("验证码错误或已过期")
+	ErrInvalidCode                        = errors.New("验证码错误或已过期")
 	ErrCannotDeleteWithActiveAppointments = errors.New("存在进行中的预约，无法注销账号")
+	ErrInvalidRole                        = errors.New("无效的角色，仅支持 user 或 admin")
 )

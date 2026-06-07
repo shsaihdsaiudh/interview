@@ -53,12 +53,16 @@ ssh root@ggggs.icu "cd /opt/interview-platform && docker compose -f docker-compo
 ```bash
 POSTGRES_PASSWORD=<数据库密码>
 JWT_SECRET=<随机密钥>
+ADMIN_EMAIL=<你的管理员邮箱>@std.uestc.edu.cn
 SMTP_HOST=smtp.std.uestc.edu.cn
 SMTP_PORT=465
 SMTP_USER=<学号>@std.uestc.edu.cn
 SMTP_PASS=<客户端专用密码>
 SMTP_TLS_SERVERNAME=icoremail.net
 ```
+
+- `ADMIN_EMAIL` 配置的管理员邮箱对应的用户注册后，启动时将自动提升为管理员角色
+- 管理员后台入口：`/admin`（仅管理员角色可访问，普通用户访问会跳回首页）
 
 生成随机 JWT_SECRET：`openssl rand -base64 32`
 
@@ -76,6 +80,14 @@ SMTP_TLS_SERVERNAME=icoremail.net
 - 前端: React + TypeScript + Vite + Tailwind CSS
 - 数据库: PostgreSQL 17
 - 部署: Docker Compose（Nginx 反向代理 + Go 后端 + PostgreSQL）
+- HTTPS: Let's Encrypt 证书，自动续期 + Docker nginx reload hook
+
+## HTTPS / TLS
+- 证书由 Let's Encrypt (certbot) 管理，位于 `/etc/letsencrypt/live/ggggs.icu/`
+- Docker nginx 通过 volumes 挂载证书文件（只读）
+- certbot 每 12 小时检查一次续期（systemd timer）
+- 续期后自动执行 `/etc/letsencrypt/renewal-hooks/deploy/reload-docker-nginx.sh` 重载 Docker nginx
+- 当前证书有效期至 2026-08-28
 
 ## 已知问题 & 踩坑记录
 

@@ -81,7 +81,7 @@ function Register() {
                 <div className="flex flex-1 min-w-0">
                   <input type="text" value={studentId}
                     onChange={(e) => { setStudentId(e.target.value); setCodeSent(false); }}
-                    placeholder="2024010914026" disabled={loading}
+                    placeholder="请输入学号" disabled={loading}
                     className="flex-1 min-w-0 px-3 py-2 bg-surface border border-border text-text pixel-corners-sm"
                     style={{ fontSize: 18, borderRight: 0, clipPath: 'polygon(0 2px, 2px 2px, 2px 0, 100% 0, 100% 100%, 0 100%)' }} />
                   <span className="px-2 py-2 bg-surface border border-border text-text-muted select-none whitespace-nowrap"

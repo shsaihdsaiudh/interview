@@ -26,6 +26,15 @@ type AppointmentRepository interface {
 	// HasActiveAppointment 检查时间段是否有活跃预约（pending/accepted）。
 	HasActiveAppointment(timeSlotID string) bool
 
+	// FindAllAppointments 管理员查询所有预约（分页）。
+	FindAllAppointments(page, pageSize int) ([]*Appointment, int, error)
+
+	// FindAllAppointmentsAdmin 管理员查询所有预约（含昵称和时段，分页）。
+	FindAllAppointmentsAdmin(page, pageSize int) ([]AdminAppointmentRow, int, error)
+
+	// DeleteAppointmentByID 管理员删除预约。
+	DeleteAppointmentByID(id string) error
+
 	// ── 空闲时间操作 ──
 
 	// CreateAvailability 添加空闲时间。

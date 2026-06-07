@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	domainUser "interview-server/domain/user"
 	"interview-server/interfaces/handler"
 	"interview-server/interfaces/middleware"
 )
@@ -17,6 +18,8 @@ func RegisterRoutes(
 	userH *handler.UserHandler,
 	apptH *handler.AppointmentHandler,
 	recruitH *handler.RecruitmentHandler,
+	adminH *handler.AdminHandler,
+	userRepo domainUser.UserRepository,
 ) {
 	// ── 速率限制器（基于 IP 的滑动窗口）──
 	limiter := middleware.NewRateLimiter()
@@ -89,6 +92,24 @@ func RegisterRoutes(
 
 			// 招募卡片管理
 			protected.PUT("/recruitment-card", recruitH.CreateOrUpdateCard)
+
+			// ── 管理员路由 ──
+			admin := v1.Group("/admin")
+			admin.Use(middleware.AdminOnly(userRepo))
+			{
+				admin.GET("/stats", adminH.GetStats)
+
+				admin.GET("/users", adminH.ListUsers)
+				admin.PUT("/users/:email/role", adminH.UpdateUserRole)
+				admin.PUT("/users/:email/ban", adminH.BanUser)
+				admin.PUT("/users/:email/unban", adminH.UnbanUser)
+
+				admin.GET("/cards", adminH.ListCards)
+				admin.DELETE("/cards/:id", adminH.DeleteCard)
+
+				admin.GET("/appointments", adminH.ListAppointments)
+				admin.DELETE("/appointments/:id", adminH.DeleteAppointment)
+			}
 		}
 	}
 }

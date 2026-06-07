@@ -88,6 +88,33 @@ func (m *mockRecruitmentCardRepo) List(filter recruitment.ListCardsFilter) ([]*r
 	return matched[start:end], total, nil
 }
 
+func (m *mockRecruitmentCardRepo) ListAllAdmin(keyword string, page, pageSize int) ([]*recruitment.RecruitmentCard, int, error) {
+	var all []*recruitment.RecruitmentCard
+	for _, c := range m.cards {
+		all = append(all, c)
+	}
+	total := len(all)
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []*recruitment.RecruitmentCard{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
+}
+
+func (m *mockRecruitmentCardRepo) DeleteByID(id string) error {
+	for uid, c := range m.cards {
+		if c.ID == id {
+			delete(m.cards, uid)
+			return nil
+		}
+	}
+	return recruitment.ErrCardNotFound
+}
+
 var _ recruitment.RecruitmentCardRepository = (*mockRecruitmentCardRepo)(nil)
 
 func newTestRecruitmentService(cr *mockRecruitmentCardRepo, ur *mockUserRepo) *RecruitmentService {
